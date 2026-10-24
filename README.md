@@ -35,6 +35,8 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 - Area, volume and formula shown for each section
 - Volume-based spoil truck loads
 - Weight-based material delivery capacity
+- Truck presets with volume, weight, fuel consumption and price
+- Local truck preset save, load and delete
 - Material In with direct volume, direct weight or area × depth
 - Material cost, delivery pricing and combined spoil and delivery totals
 - Swell, price rounding and GST
@@ -43,13 +45,13 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 
 ## Still planned
 
-- Truck presets with volume, weight, fuel consumption and price
 - Material presets with density, swell and settling values
 - Save, load and name jobs
 - Uneven fill areas and multiple material entries
 - Travel and fuel estimates
 - Offline native apps for Windows, Linux and Android
 - Shared job list for Docker users on the same LAN
+- Shared truck presets for Docker users on the same LAN
 - Docker container and native packaging
 
 ## Planned stack

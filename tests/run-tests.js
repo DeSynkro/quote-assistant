@@ -1,9 +1,11 @@
 "use strict";
 
 const Calc = require("../app/calc.js");
+const QuoteStorage = require("../app/storage.js");
 const { createCases } = require("./cases.js");
+const { createCases: createStorageCases } = require("./storage-cases.js");
 
-const cases = createCases(Calc);
+const cases = [...createCases(Calc), ...createStorageCases(QuoteStorage)];
 let failed = 0;
 
 for (const test of cases) {

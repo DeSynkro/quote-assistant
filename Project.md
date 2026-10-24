@@ -11,8 +11,8 @@ UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-
 - Calculation engine: `app/calc.js`.
 - Manual test sandbox: `tests/tests.html`.
 - Terminal tests: `node tests/run-tests.js`.
-- Working: section shapes, swell, truck loads, price, rounding, GST, Material In, delivery pricing, combined totals, warnings and the browser UI.
-- Not yet built: material presets, save and load, uneven fill areas, multiple materials, fuel, native packaging and Docker sharing.
+- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, combined totals, warnings and the browser UI.
+- Not yet built: material presets, job save and load, uneven fill areas, multiple materials, travel and fuel, native packaging and Docker sharing.
 
 ---
 
@@ -72,6 +72,20 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   the Weight and Both spoil tabs are hidden for now and can return later.
 - Reference truck: roughly 8 t and 6.5 m³, both editable.
 - Price is entered **per truck** and scales with the number of trucks.
+- Optional fuel consumption is stored in km/L.
+
+### Truck presets (implemented)
+- Named presets store volume capacity, weight capacity, price per truck and
+  optional fuel consumption.
+- Multiple trucks are supported.
+- Selecting a preset loads its values. Editing does not overwrite the preset
+  until Save is used.
+- Keeping the same name on Save updates the selected preset. Changing the name
+  creates a new preset, leaving the old one intact.
+- Presets are stored locally with a versioned schema.
+- Docker will share presets with LAN users in the Docker milestone.
+- Saved jobs will store the truck values themselves, not only a preset ID, so
+  editing a preset later does not change an old quote.
 
 ### Job structure
 - A job is modular: multiple sections, each added with an "Add More" button.
@@ -225,7 +239,8 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 ### Testing (confirmed)
 - `tests/tests.html` opens by double-click and includes a manual sandbox for
   trying measurements, plus pass or fail results for the calculation functions.
-- The same checks run in the terminal with `node tests/run-tests.js`.
+- The same checks run in the terminal with `node tests/run-tests.js`, together
+  with the truck preset storage tests.
 - The Docker server gets a small test script using Node's built-in test runner,
   with no packages.
 - Manual smoke checks cover the browser app, the Docker LAN app and the Tauri
@@ -234,7 +249,6 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 ## Open Questions
 - Android only, or iOS eventually? (iOS builds require a macOS host; not possible
   from the current Linux setup.)
-- One truck type per job, or switchable saved truck presets?
 - Currency assumed AUD (`$`). Confirm.
 - Real-world swell / voids / bulk-density numbers to seed the material presets.
 - Should spoil and delivery trips be combinable, where the same truck can return
@@ -244,14 +258,10 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Fuel estimate: confirm the formula (total trucks × one-way distance × 2 ×
   fuel use ÷ 100 × diesel price) and the default fuel-use figure, or make it a
   saved setting.
-- Should Docker mode share material and truck presets through the server, or keep
-  settings local to each browser and device?
 
 ## Additional Suggestions (candidate - not committed)
 - **Capacity margin**: a "comfortable fit" factor (default 90-95% of capacity) so
   the app leans toward an extra truck rather than an overloaded one.
-- **Truck presets**: save named trucks ("Tipper - 8 t / 6.5 m³") and pick one per
-  job; remember the last used.
 - **Material preset table**: topsoil, sand, gravel, crushed rock, clay, concrete
   rubble - each with loose density, swell and voids, all editable.
 - **Autosave the current job** locally so an accidental close doesn't lose it.

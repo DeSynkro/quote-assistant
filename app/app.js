@@ -8,6 +8,16 @@
   const truckVolumeInput = document.getElementById("truck-volume");
   const truckWeightInput = document.getElementById("truck-weight");
   const truckPriceInput = document.getElementById("truck-price");
+  const truckFuelInput = document.getElementById("truck-fuel");
+  const truckPresetSelect = document.getElementById("truck-preset");
+  const saveTruckPresetButton = document.getElementById("save-truck-preset");
+  const deleteTruckPresetButton = document.getElementById("delete-truck-preset");
+  const presetSaveRow = document.getElementById("preset-save-row");
+  const presetNameInput = document.getElementById("preset-name");
+  const confirmTruckPresetButton = document.getElementById("confirm-truck-preset");
+  const cancelTruckPresetButton = document.getElementById("cancel-truck-preset");
+  const truckPresetStatus = document.getElementById("truck-preset-status");
+  const truckPresetWarning = document.getElementById("truck-preset-warning");
   const swellEnabledInput = document.getElementById("swell-enabled");
   const swellPercentInput = document.getElementById("swell-percent");
   const roundUpInput = document.getElementById("round-up");
@@ -102,6 +112,7 @@
       volumeCapacity: "6.5",
       weightCapacity: "8",
       pricePerTruck: "800",
+      fuelConsumption: "",
     },
     swell: {
       enabled: false,
@@ -114,6 +125,33 @@
     delivery: createDelivery(),
     showRounded: true,
   };
+
+  let truckPresets = [];
+  let selectedTruckPresetId = null;
+  let truckDirty = false;
+  let truckPresetCounter = 0;
+  let truckStore;
+
+  function getStorageBackend() {
+    try {
+      return window.localStorage;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function createTruckPresetId() {
+    truckPresetCounter += 1;
+    return `truck-${Date.now()}-${truckPresetCounter}`;
+  }
+
+  const storageApi = typeof QuoteStorage !== "undefined" ? QuoteStorage : null;
+  truckStore = storageApi
+    ? storageApi.createStore(getStorageBackend())
+    : {
+      load: () => ({ presets: [], selectedId: null }),
+      save: () => false,
+    };
 
   function format(value) {
     const number = Number(value);
@@ -348,6 +386,7 @@
         capacityMode: state.truck.capacityMode,
         volumeCapacity: state.truck.volumeCapacity,
         weightCapacity: state.truck.weightCapacity,
+        fuelConsumption: state.truck.fuelConsumption,
       },
       swell: {
         enabled: state.swell.enabled,
@@ -714,6 +753,199 @@
     updateResults(result);
   }
 
+  function getSelectedTruckPreset() {
+    return truckPresets.find((preset) => preset.id === selectedTruckPresetId) || null;
+  }
+
+  function applyPresetToState(preset) {
+    state.truck.volumeCapacity = preset.volumeCapacity;
+    state.truck.weightCapacity = preset.weightCapacity;
+    state.truck.pricePerTruck = preset.pricePerTruck;
+    state.truck.fuelConsumption = preset.fuelConsumption;
+  }
+
+  function renderTruckPresetOptions() {
+    truckPresetSelect.innerHTML = "";
+
+    const custom = document.createElement("option");
+    custom.value = "";
+    custom.textContent = "Custom / unsaved";
+    truckPresetSelect.appendChild(custom);
+
+    for (const preset of truckPresets) {
+      const option = document.createElement("option");
+      option.value = preset.id;
+      option.textContent = preset.name;
+      truckPresetSelect.appendChild(option);
+    }
+
+    truckPresetSelect.value = selectedTruckPresetId || "";
+    deleteTruckPresetButton.disabled = !selectedTruckPresetId;
+  }
+
+  function updateTruckPresetStatus() {
+    const preset = getSelectedTruckPreset();
+
+    if (preset) {
+      truckPresetStatus.textContent = truckDirty
+        ? `Preset: ${preset.name} · unsaved changes`
+        : `Preset: ${preset.name}`;
+    } else {
+      truckPresetStatus.textContent = truckDirty
+        ? "Custom truck · unsaved"
+        : "Custom truck";
+    }
+  }
+
+  function setPresetWarning(message) {
+    truckPresetWarning.textContent = message || "";
+    truckPresetWarning.hidden = !message;
+  }
+
+  function markTruckDirty() {
+    truckDirty = true;
+    updateTruckPresetStatus();
+  }
+
+  function openPresetSaveForm() {
+    const preset = getSelectedTruckPreset();
+    presetNameInput.value = preset ? preset.name : "";
+    setPresetWarning("");
+    presetSaveRow.hidden = false;
+    presetNameInput.focus();
+    presetNameInput.select();
+  }
+
+  function closePresetSaveForm() {
+    presetSaveRow.hidden = true;
+  }
+
+  function saveTruckPreset() {
+    const name = presetNameInput.value.trim();
+    if (!name) {
+      setPresetWarning("Enter a preset name.");
+      presetNameInput.focus();
+      return;
+    }
+
+    const selected = getSelectedTruckPreset();
+    const existingByName = truckPresets.find(
+      (preset) => preset.name.toLowerCase() === name.toLowerCase()
+    );
+    let existing = null;
+
+    if (selected && selected.name.toLowerCase() === name.toLowerCase()) {
+      existing = selected;
+    } else if (selected) {
+      if (existingByName) {
+        setPresetWarning("Another preset already uses that name.");
+        presetNameInput.focus();
+        return;
+      }
+    } else if (existingByName) {
+      existing = existingByName;
+    }
+
+    const preset = {
+      id: existing ? existing.id : createTruckPresetId(),
+      name,
+      volumeCapacity: state.truck.volumeCapacity,
+      weightCapacity: state.truck.weightCapacity,
+      fuelConsumption: state.truck.fuelConsumption,
+      pricePerTruck: state.truck.pricePerTruck,
+    };
+
+    if (existing) {
+      truckPresets = truckPresets.map((item) => item.id === existing.id ? preset : item);
+    } else {
+      truckPresets = [...truckPresets, preset];
+    }
+
+    selectedTruckPresetId = preset.id;
+    truckDirty = false;
+    const saved = truckStore.save({
+      presets: truckPresets,
+      selectedId: selectedTruckPresetId,
+    });
+    closePresetSaveForm();
+    renderTruckPresetOptions();
+    updateTruckPresetStatus();
+    setPresetWarning(saved
+      ? ""
+      : "Presets could not be saved in this browser. They will last until you reload.");
+  }
+
+  function deleteTruckPreset() {
+    const preset = getSelectedTruckPreset();
+    if (!preset) {
+      return;
+    }
+
+    if (!window.confirm(`Delete truck preset "${preset.name}"?`)) {
+      return;
+    }
+
+    truckPresets = truckPresets.filter((item) => item.id !== preset.id);
+    selectedTruckPresetId = null;
+    truckDirty = false;
+    const saved = truckStore.save({ presets: truckPresets, selectedId: null });
+    renderTruckPresetOptions();
+    updateTruckPresetStatus();
+    setPresetWarning(saved
+      ? ""
+      : "Presets could not be saved in this browser. They will last until you reload.");
+  }
+
+  function handleTruckPresetChange() {
+    const id = truckPresetSelect.value;
+
+    if (!id) {
+      selectedTruckPresetId = null;
+      truckDirty = false;
+      deleteTruckPresetButton.disabled = true;
+      const saved = truckStore.save({ presets: truckPresets, selectedId: null });
+      setPresetWarning(saved
+        ? ""
+        : "Presets could not be saved in this browser. They will last until you reload.");
+      updateTruckPresetStatus();
+      return;
+    }
+
+    const preset = truckPresets.find((item) => item.id === id);
+    if (!preset) {
+      return;
+    }
+
+    selectedTruckPresetId = preset.id;
+    truckDirty = false;
+    applyPresetToState(preset);
+    const saved = truckStore.save({
+      presets: truckPresets,
+      selectedId: selectedTruckPresetId,
+    });
+    setPresetWarning(saved
+      ? ""
+      : "Presets could not be saved in this browser. They will last until you reload.");
+    syncStaticControls();
+    renderTruckPresetOptions();
+    updateTruckPresetStatus();
+    update();
+  }
+
+  function initTruckPresets() {
+    const stored = truckStore.load();
+    truckPresets = stored.presets;
+    selectedTruckPresetId = stored.selectedId;
+    const preset = getSelectedTruckPreset();
+
+    if (preset) {
+      applyPresetToState(preset);
+    }
+
+    renderTruckPresetOptions();
+    updateTruckPresetStatus();
+  }
+
   function syncDeliveryControls() {
     deliveryEnabledInput.checked = state.delivery.enabled;
     deliveryCard.hidden = !state.delivery.enabled;
@@ -745,6 +977,7 @@
     truckVolumeInput.value = state.truck.volumeCapacity;
     truckWeightInput.value = state.truck.weightCapacity;
     truckPriceInput.value = state.truck.pricePerTruck;
+    truckFuelInput.value = state.truck.fuelConsumption;
     swellEnabledInput.checked = state.swell.enabled;
     swellPercentInput.value = state.swell.percent;
     roundUpInput.checked = state.showRounded;
@@ -856,16 +1089,25 @@
 
   truckVolumeInput.addEventListener("input", () => {
     state.truck.volumeCapacity = truckVolumeInput.value;
+    markTruckDirty();
     update();
   });
 
   truckWeightInput.addEventListener("input", () => {
     state.truck.weightCapacity = truckWeightInput.value;
+    markTruckDirty();
     update();
   });
 
   truckPriceInput.addEventListener("input", () => {
     state.truck.pricePerTruck = truckPriceInput.value;
+    markTruckDirty();
+    update();
+  });
+
+  truckFuelInput.addEventListener("input", () => {
+    state.truck.fuelConsumption = truckFuelInput.value;
+    markTruckDirty();
     update();
   });
 
@@ -903,6 +1145,21 @@
   deliveryCard.addEventListener("input", handleDeliveryInput);
   deliveryCard.addEventListener("change", handleDeliveryInput);
 
+  truckPresetSelect.addEventListener("change", handleTruckPresetChange);
+  saveTruckPresetButton.addEventListener("click", openPresetSaveForm);
+  deleteTruckPresetButton.addEventListener("click", deleteTruckPreset);
+  confirmTruckPresetButton.addEventListener("click", saveTruckPreset);
+  cancelTruckPresetButton.addEventListener("click", closePresetSaveForm);
+
+  presetNameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveTruckPreset();
+    } else if (event.key === "Escape") {
+      closePresetSaveForm();
+    }
+  });
+
   sectionsEl.addEventListener("input", handleSectionInput);
   sectionsEl.addEventListener("change", handleSectionInput);
   sectionsEl.addEventListener("click", handleSectionAction);
@@ -930,6 +1187,7 @@
     renderSections();
   });
 
+  initTruckPresets();
   syncStaticControls();
   renderSections();
 })();

@@ -24,7 +24,35 @@
       <div class="card">
         <h2>Truck</h2>
 
-        <div class="grid-3">
+        <div class="preset-row">
+          <label class="field">
+            <span>Truck preset</span>
+            <select id="truck-preset" aria-label="Truck preset">
+              <option value="">Custom / unsaved</option>
+            </select>
+          </label>
+          <div class="preset-actions">
+            <button class="btn small" id="save-truck-preset" type="button">Save preset</button>
+            <button class="btn small" id="delete-truck-preset" type="button">Delete</button>
+          </div>
+        </div>
+
+        <div class="preset-save-row" id="preset-save-row" hidden>
+          <label class="field">
+            <span>Preset name</span>
+            <input id="preset-name" type="text" placeholder="My tipper">
+            <span class="small muted">Keep the name to update this truck, or change it to save a new one.</span>
+          </label>
+          <div class="preset-actions">
+            <button class="btn small primary" id="confirm-truck-preset" type="button">Save</button>
+            <button class="btn small" id="cancel-truck-preset" type="button">Cancel</button>
+          </div>
+        </div>
+
+        <div class="preset-status" id="truck-preset-status"></div>
+        <div class="preset-warning" id="truck-preset-warning" hidden></div>
+
+        <div class="grid-4">
           <label class="field">
             <span>Volume capacity</span>
             <span class="with-unit">
@@ -44,6 +72,13 @@
             <span class="with-unit">
               <input id="truck-price" type="number" inputmode="decimal" step="any" value="800">
               <span class="unit">$</span>
+            </span>
+          </label>
+          <label class="field">
+            <span>Fuel consumption</span>
+            <span class="with-unit">
+              <input id="truck-fuel" type="number" inputmode="decimal" step="any" placeholder="Optional">
+              <span class="unit">km/L</span>
             </span>
           </label>
         </div>
@@ -276,6 +311,7 @@
 </main>
 
 <script src="calc.js"></script>
+<script src="storage.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
