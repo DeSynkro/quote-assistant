@@ -186,8 +186,9 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - All assets are bundled. No remote fonts, scripts or runtime network calls.
 
 ### Testing (confirmed)
-- `tests/tests.html` opens by double-click and shows pass or fail results for the
-  calculation functions.
+- `tests/tests.html` opens by double-click and includes a manual sandbox for
+  trying measurements, plus pass or fail results for the calculation functions.
+- The same checks run in the terminal with `node tests/run-tests.js`.
 - The Docker server gets a small test script using Node's built-in test runner,
   with no packages.
 - Manual smoke checks cover the browser app, the Docker LAN app and the Tauri

@@ -26,8 +26,9 @@ Planning and the UI mockup are complete. Application code has not started.
 
 - Planning notes: [Project.md](Project.md)
 - UI mockup: [mockups/quote-assistant-ui.html](mockups/quote-assistant-ui.html)
+- Calculation tests and sandbox: [tests/tests.html](tests/tests.html)
 
-Open the mockup HTML file in a browser to view it.
+Open the mockup or the test page directly in a browser.
 
 ## Planned features
 

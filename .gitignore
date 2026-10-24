@@ -7,6 +7,9 @@ assets/basic-idea.jpg
 dist/
 src-tauri/target/
 
+# Local planning notes
+docs/planning/
+
 # Runtime data
 docker/data/jobs/*.json
 docker/data/trash/
