@@ -126,6 +126,9 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Direct weight is entered in tonnes and has no settling allowance.
 - Material price is per m³ for volume and area, and per tonne for weight.
 - Optional density is used for weight limits and unit conversion.
+- Delivery uses the capacity that matches the material amount: weight for direct
+  weight, volume for volume and area, and both when density makes both known.
+  This is independent of the spoil capacity mode.
 - Delivery pricing options:
   - Use the main truck rate.
   - Custom delivery fee.

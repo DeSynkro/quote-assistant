@@ -244,25 +244,30 @@
       });
     }
 
-    const mode = spec.capacityMode === "volume"
-      || spec.capacityMode === "weight"
-      || spec.capacityMode === "both"
-      ? spec.capacityMode
-      : "both";
-    const weightNeeded = mode !== "volume";
+    const volumeCapacity = positiveNumber(spec.volumeCapacity);
     const weightCapacity = positiveNumber(spec.weightCapacity);
+    let mode;
 
-    if (weightNeeded && weight === null) {
+    if (basis === "weight") {
+      if (weightCapacity !== null) {
+        mode = deliveredVolume !== null && volumeCapacity !== null ? "both" : "weight";
+      } else if (deliveredVolume !== null && volumeCapacity !== null) {
+        mode = "volume";
+      } else {
+        mode = "weight";
+      }
+    } else if (deliveredVolume !== null && volumeCapacity !== null) {
+      mode = weight !== null && weightCapacity !== null ? "both" : "volume";
+    } else if (weight !== null && weightCapacity !== null) {
+      mode = "weight";
+    } else {
+      mode = "volume";
+    }
+
+    if (weight === null && weightCapacity !== null && basis !== "weight") {
       warnings.push({
         code: "material-weight-unknown",
         message: "Weight is unknown because no material density was entered.",
-      });
-    }
-
-    if (deliveredVolume === null && (mode === "volume" || (mode === "both" && weightCapacity === null))) {
-      warnings.push({
-        code: "material-volume-unknown",
-        message: "Enter a material density to calculate the delivery volume.",
       });
     }
 
@@ -278,6 +283,14 @@
         weightCapacity: spec.weightCapacity,
       }
     );
+
+    if (amountValue !== null && amountValue > 0 && loads.exact <= 0) {
+      warnings.push({
+        code: "material-missing-truck-capacity",
+        message: "Add a truck capacity for the delivery amount, or enter a material density.",
+      });
+    }
+
     const deliveryMode = source.deliveryMode === "custom" || source.deliveryMode === "included"
       ? source.deliveryMode
       : "truckRate";

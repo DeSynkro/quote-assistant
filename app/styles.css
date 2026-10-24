@@ -418,7 +418,9 @@ select:focus {
   appearance: none;
   flex: 0 0 auto;
   width: 44px;
+  min-height: 25px;
   height: 25px;
+  padding: 0;
   background: #3a3e47;
   border-radius: 999px;
   position: relative;

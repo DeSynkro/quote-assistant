@@ -469,12 +469,19 @@
     mathsOutput.appendChild(row);
   }
 
-  function truckCountText(trucks, showRounded) {
-    let text = `${format(trucks.exact)} trucks`;
-    if (showRounded && trucks.rounded !== trucks.exact) {
-      text += ` (${trucks.rounded} rounded)`;
-    }
-    return text;
+  function truckWord(value) {
+    return Number(value) === 1 ? "truck" : "trucks";
+  }
+
+  function truckValueText(trucks, showRounded) {
+    const value = showRounded ? trucks.rounded : trucks.exact;
+    return `${format(value)} ${truckWord(value)}`;
+  }
+
+  function moneyPair(rounded, exact, showRounded) {
+    return showRounded && rounded !== exact
+      ? `${money(rounded)} rounded · ${money(exact)} exact`
+      : money(exact);
   }
 
   function spoilLimitText(totals) {
@@ -582,8 +589,15 @@
     volumeSubOutput.textContent = volumeSub;
 
     trucksLabelOutput.textContent = delivery ? "Spoil truck loads" : "Truck loads";
-    trucksOutput.textContent = truckCountText(totals.trucks, showRounded);
-    limitOutput.textContent = `${spoilLimitText(totals)} · ${money(totals.price.exact)} exact${showRounded && totals.price.rounded !== totals.price.exact ? ` · ${money(totals.price.rounded)} rounded` : ""}`;
+    trucksOutput.textContent = truckValueText(totals.trucks, showRounded);
+
+    const spoilParts = [];
+    if (showRounded && totals.trucks.rounded !== totals.trucks.exact) {
+      spoilParts.push(`${format(totals.trucks.exact)} exact`);
+    }
+    spoilParts.push(spoilLimitText(totals));
+    spoilParts.push(moneyPair(totals.price.rounded, totals.price.exact, showRounded));
+    limitOutput.textContent = spoilParts.join(" · ");
 
     materialRow.hidden = !delivery;
     combinedRow.hidden = !delivery;
@@ -599,28 +613,34 @@
       } else if (delivery.materialCost <= 0) {
         materialSubOutput.textContent = "Enter the material price.";
       } else {
-        let sub = "";
+        const parts = [];
         if (delivery.deliveredVolume !== null && delivery.weight !== null) {
-          sub += `${format(delivery.weight)} t · `;
+          parts.push(`${format(delivery.weight)} t`);
         }
-        sub += truckCountText(delivery.trucks, showRounded);
+        parts.push(truckValueText(delivery.trucks, showRounded));
+        if (showRounded && delivery.trucks.rounded !== delivery.trucks.exact) {
+          parts.push(`${format(delivery.trucks.exact)} exact`);
+        }
         if (delivery.trucks.limit === "volume") {
-          sub += " · volume-limited";
+          parts.push("volume-limited");
         } else if (delivery.trucks.limit === "weight") {
-          sub += " · weight-limited";
+          parts.push("weight-limited");
         }
-        sub += ` · ${money(delivery.total.exact)} exact`;
-        if (showRounded && delivery.total.rounded !== delivery.total.exact) {
-          sub += ` · ${money(delivery.total.rounded)} rounded`;
-        }
-        materialSubOutput.textContent = sub;
+        parts.push(moneyPair(delivery.total.rounded, delivery.total.exact, showRounded));
+        materialSubOutput.textContent = parts.join(" · ");
       }
 
-      combinedTrucksOutput.textContent = truckCountText(combined.trucks, showRounded);
-      combinedSubOutput.textContent = `Spoil and delivery trips · ${money(combined.price.exact)} exact${showRounded && combined.price.rounded !== combined.price.exact ? ` · ${money(combined.price.rounded)} rounded` : ""}`;
+      combinedTrucksOutput.textContent = truckValueText(combined.trucks, showRounded);
+
+      const combinedParts = ["Spoil and delivery trips"];
+      if (showRounded && combined.trucks.rounded !== combined.trucks.exact) {
+        combinedParts.push(`${format(combined.trucks.exact)} exact`);
+      }
+      combinedParts.push(moneyPair(combined.price.rounded, combined.price.exact, showRounded));
+      combinedSubOutput.textContent = combinedParts.join(" · ");
     }
 
-    priceOutput.textContent = money(finalGst.exact.total);
+    priceOutput.textContent = money(showRounded ? finalGst.rounded.total : finalGst.exact.total);
 
     const gstAmount = showRounded ? finalGst.rounded.gst : finalGst.exact.gst;
     let gstText = "No GST";
@@ -630,9 +650,10 @@
       gstText = `Includes ${money(gstAmount)} GST`;
     }
 
-    priceSubOutput.textContent = showRounded
-      ? `Rounded: ${money(finalGst.rounded.total)} · ${gstText}`
-      : gstText;
+    const exactCharge = showRounded && finalGst.rounded.total !== finalGst.exact.total
+      ? `Exact ${money(finalGst.exact.total)} · `
+      : "";
+    priceSubOutput.textContent = `${exactCharge}${gstText}`;
 
     if (delivery) {
       if (!materialHasAmount(delivery)) {
@@ -644,9 +665,9 @@
         let summary = "";
 
         if (totals.volumeInGround > 0) {
-          summary += `Spoil fits in ${format(totals.trucks.exact)} trucks`;
+          summary += `Spoil fits in ${format(totals.trucks.exact)} ${truckWord(totals.trucks.exact)}`;
           if (showRounded && totals.trucks.rounded !== totals.trucks.exact) {
-            summary += ` (round up to ${totals.trucks.rounded})`;
+            summary += `, rounded up to ${totals.trucks.rounded}`;
           }
           summary += ". ";
         }
@@ -654,9 +675,9 @@
         summary += `Bring in ${materialAmountText(delivery)} of material. `;
 
         if (finalTrucks.exact > 0) {
-          summary += `About ${format(finalTrucks.exact)} trucks there and back`;
+          summary += `About ${format(finalTrucks.exact)} ${truckWord(finalTrucks.exact)} there and back`;
           if (showRounded && finalTrucks.rounded !== finalTrucks.exact) {
-            summary += ` (round up to ${finalTrucks.rounded})`;
+            summary += `, rounded up to ${finalTrucks.rounded}`;
           }
           summary += `. Estimated charge ${charge}.`;
         } else {
@@ -673,9 +694,9 @@
         : "Add a truck capacity and price to see an estimate.";
     } else {
       const charge = money(showRounded ? totals.gst.rounded.total : totals.gst.exact.total);
-      let summary = `Spoil fits in ${format(totals.trucks.exact)} trucks`;
+      let summary = `Spoil fits in ${format(totals.trucks.exact)} ${truckWord(totals.trucks.exact)}`;
       if (showRounded && totals.trucks.rounded !== totals.trucks.exact) {
-        summary += ` (round up to ${totals.trucks.rounded})`;
+        summary += `, rounded up to ${totals.trucks.rounded}`;
       }
       summary += `. Estimated charge ${charge}.`;
       summaryOutput.textContent = summary;
