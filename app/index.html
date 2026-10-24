@@ -14,7 +14,7 @@
       <div class="subtitle">Offline estimating for earthmoving jobs</div>
     </div>
     <div class="header-actions">
-      <span class="pill green">Offline · local only</span>
+      <span class="pill green" id="storage-pill">Offline · local only</span>
     </div>
   </header>
 
@@ -325,7 +325,7 @@
 
       <div class="notice">
         <span class="dot"></span>
-        <span>All calculations stay on this device. No data is sent anywhere.</span>
+        <span id="privacy-notice">All calculations stay on this device. No data is sent anywhere.</span>
       </div>
     </aside>
   </div>
@@ -337,7 +337,7 @@
       <h2>Load job</h2>
       <button class="icon-btn" id="close-load-jobs" type="button">Close</button>
     </div>
-    <div class="small muted">Newest first · saved on this device only</div>
+    <div class="small muted" id="saved-jobs-scope">Newest first · saved on this device only</div>
     <div id="saved-jobs-list"></div>
   </div>
 </div>

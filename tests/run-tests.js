@@ -12,22 +12,26 @@ const cases = [
   ...createStorageCases(QuoteStorage),
   ...createBackupCases(Backup),
 ];
-let failed = 0;
+async function main() {
+  let failed = 0;
 
-for (const test of cases) {
-  try {
-    test.run();
-    console.log(`PASS ${test.name}`);
-  } catch (error) {
-    failed += 1;
-    console.error(`FAIL ${test.name}`);
-    console.error(`     ${error.message}`);
+  for (const test of cases) {
+    try {
+      await test.run();
+      console.log(`PASS ${test.name}`);
+    } catch (error) {
+      failed += 1;
+      console.error(`FAIL ${test.name}`);
+      console.error(`     ${error.message}`);
+    }
+  }
+
+  console.log("");
+  console.log(`${cases.length - failed} of ${cases.length} passed`);
+
+  if (failed > 0) {
+    process.exitCode = 1;
   }
 }
 
-console.log("");
-console.log(`${cases.length - failed} of ${cases.length} passed`);
-
-if (failed > 0) {
-  process.exitCode = 1;
-}
+main();

@@ -1,7 +1,7 @@
 # Quote Assistant
 
 A local-first, privacy-first estimator for earthmoving quotes. Native builds run
-fully offline; the Docker build stays on the local network. Used internally on the
+fully offline; the Docker Compose stack stays on the local network. Used internally on the
 spot while measuring a job; the customer never sees the output.
 
 UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-assistant-ui.html)
@@ -11,8 +11,10 @@ UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-
 - Calculation engine: `app/calc.js`.
 - Manual test sandbox: `tests/tests.html`.
 - Terminal tests: `node tests/run-tests.js`.
+- Docker/server tests: `node --test tests/server.test.js`.
 - Working: section shapes, per-section swell, truck loads, truck presets, price, rounding, GST, multiple material deliveries, delivery pricing, travel and fuel, job save/load, data export/import, combined totals, warnings and the browser UI.
-- Not yet built: material presets, uneven fill areas, multiple materials, native packaging and Docker sharing.
+- Working: Docker Compose LAN app with shared jobs, shared truck presets, atomic JSON writes and a trash folder.
+- Not yet built: material presets, uneven fill areas and native packaging.
 
 ---
 
@@ -50,20 +52,21 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Internal estimating aid, not a customer-facing quote generator.
 - Used on site to sanity-check price and truck count without relying on AI.
 - Results are for the operator only; no printed quote, no customer details.
-- Native builds are fully offline. The Docker build runs on the local network
-  only. Neither uses telemetry, analytics, accounts, cloud storage or external
+- Native builds are fully offline. The Docker Compose stack runs on the local
+  network only. Neither uses telemetry, analytics, accounts, cloud storage or external
   data collection.
 
 ### Platforms
 - Windows portable `.exe`
 - Linux AppImage
 - Android APK
-- Docker container serving the same web app
+- Docker Compose service serving the same web app
 - One shared web UI across all four.
 - Native apps store plain JSON in the OS app data folder through a small Tauri
   storage bridge.
-- Docker serves the same UI from a tiny Node server and stores jobs in
-  `docker/data/jobs/`, shared by everyone using the LAN web app.
+- Docker Compose serves the same UI from a tiny Node server and stores jobs in
+  `docker/data/jobs/`, shared by everyone using the LAN web app. Truck presets
+  are shared from `docker/data/presets.json`.
 
 ### Truck capacity
 - Spoil uses volume capacity only in the current UI.
@@ -83,7 +86,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Keeping the same name on Save updates the selected preset. Changing the name
   creates a new preset, leaving the old one intact.
 - Presets are stored locally with a versioned schema.
-- Docker will share presets with LAN users in the Docker milestone.
+- Docker shares presets with LAN users.
 - Saved jobs store the truck values themselves, not only a preset ID, so editing
   a preset later does not change an old quote.
 
@@ -194,7 +197,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Prefer descriptive labels over bare jargon, e.g. "Apply swell (material
   expansion)" and "Settling allowance".
 
-### Saved jobs (implemented for the browser build)
+### Saved jobs (implemented for browser and Docker)
 - Jobs can be saved, named, loaded and deleted.
 - The job bar has a name/address field and New / Save / Load controls.
 - The job name/address is optional. If left blank when saving, the job is saved
@@ -210,8 +213,9 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Save updates the currently loaded job. New clears the current job ID and name,
   keeps the truck settings and saved presets, and starts a blank job.
 - Storage is versioned.
-- The current browser build uses `localStorage`. Native and Docker storage
-  backends are planned, along with export/import to move jobs between them.
+- The browser build uses `localStorage` when no Docker API is available.
+- The Docker Compose build uses the shared server API and stores one job per JSON file.
+- Native storage is planned. Export/import already moves jobs between builds.
 - No cloud, no internet sync and no accounts.
 
 ### Backup and transfer (implemented)
@@ -227,12 +231,12 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   Docker or native builds later.
 - No network connection is used.
 
-### Data and sharing (planned for native and Docker)
-- The current browser build stores jobs in localStorage.
+### Data and sharing (Docker implemented, native planned)
+- The browser build stores jobs in localStorage.
 - Native and Docker job lists are separate in v1. There is no automatic sync
   between them.
-- Docker stores one pretty-printed JSON file per job. No SQLite and no database
-  server.
+- Docker stores one pretty-printed JSON file per job and one `presets.json` for
+  shared truck presets. No SQLite and no database server.
 - Writes are atomic, and deleted jobs move to a trash folder instead of being
   erased immediately.
 - Docker sharing is LAN only. No PIN and no accounts. The network is expected to
@@ -241,6 +245,23 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   jobs and new jobs do not conflict.
 - Backups are a matter of copying the Docker data folder or the native app data
   folder.
+- The web app probes `/api/health` on HTTP pages. If the Docker API responds, it
+  uses shared jobs and presets. Otherwise it falls back to localStorage.
+- The header, privacy notice and load panel change wording in shared mode.
+
+### Docker API (implemented)
+- `GET /api/health`
+- `GET /api/jobs`
+- `PUT /api/jobs/:id`
+- `DELETE /api/jobs/:id`
+- `GET /api/presets`
+- `PUT /api/presets`
+- The server uses only `node:http`, `node:fs`, `node:fs/promises`,
+  `node:path` and `node:crypto`.
+- Request bodies are limited to 2 MB. Job IDs are validated before use in file
+  paths. Static file paths are confined to `app/`.
+- The Docker Compose service serves the same `app/` directory and listens on
+  port 8080 by default.
 
 ### Output
 - Fractional truck count (e.g. 1.5 trucks) and price (rate × trucks).
@@ -265,12 +286,15 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   - Linux: `~/.config/quote-assistant/` for settings and
     `~/.local/share/quote-assistant/` for jobs
   - Android: the app's private data directory
-- **Docker:** one tiny Node server using only built-in modules
-  (`node:http`, `node:fs`, `node:path`, `node:crypto`). It serves the web app and
-  the JSON API. No nginx, no SQLite and no npm.
-- **Docker data:** `docker/data/jobs/*.json`, one file per job, with atomic writes
-  and a trash folder for deletes. The data folder is mounted into the container
-  and excluded from git.
+- **Docker:** Docker Compose runs one tiny Node server using only built-in
+  modules (`node:http`, `node:fs`, `node:path`, `node:crypto`). It serves the web
+  app and the JSON API. No nginx, no SQLite and no npm.
+- **Docker Compose:** `docker/docker-compose.yml` builds the image, maps port 8080 and
+  bind-mounts `docker/data/` to `/data`. `.env` supplies `PUID` and `PGID` so the
+  container can write to the mounted folder.
+- **Docker data:** `docker/data/jobs/*.json`, one file per job, plus
+  `docker/data/presets.json`, with atomic writes and a trash folder for deletes.
+  The data folder is mounted into the container and excluded from git.
 - **Browser test build:** falls back to `localStorage` when opened directly or
   served without the Docker API.
 - All assets are bundled. No remote fonts, scripts or runtime network calls.
@@ -280,10 +304,10 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   trying measurements, plus pass or fail results for the calculation functions.
 - The same checks run in the terminal with `node tests/run-tests.js`, together
   with the truck preset, job storage and backup tests.
-- The Docker server gets a small test script using Node's built-in test runner,
-  with no packages.
-- Manual smoke checks cover the browser app, the Docker LAN app and the Tauri
-  native builds.
+- The Docker server tests use Node's built-in test runner:
+  `node --test tests/server.test.js`. No packages are needed.
+- Manual smoke checks cover the browser app, the Docker Compose LAN app and the
+  Tauri native builds.
 
 ## Open Questions
 - Android only, or iOS eventually? (iOS builds require a macOS host; not possible

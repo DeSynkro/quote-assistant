@@ -10,10 +10,12 @@ src-tauri/target/
 # Local planning notes
 docs/planning/
 
-# Runtime data
+# Local configuration and runtime data
+.env
 docker/data/jobs/*.json
 docker/data/trash/
-docker/data/*.tmp
+docker/data/presets.json
+docker/data/**/*.tmp
 
 # OS and editor files
 .DS_Store

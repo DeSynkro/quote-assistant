@@ -14,6 +14,9 @@
   const loadJobsPanel = document.getElementById("load-jobs-panel");
   const closeLoadJobsButton = document.getElementById("close-load-jobs");
   const savedJobsList = document.getElementById("saved-jobs-list");
+  const storagePill = document.getElementById("storage-pill");
+  const savedJobsScope = document.getElementById("saved-jobs-scope");
+  const privacyNotice = document.getElementById("privacy-notice");
   const exportDataButton = document.getElementById("export-data");
   const importDataButton = document.getElementById("import-data");
   const importFileInput = document.getElementById("import-file");
@@ -185,6 +188,7 @@
   let currentJobId = null;
   let jobCounter = 0;
   let jobStore;
+  let storageIsShared = false;
 
   function getStorageBackend() {
     try {
@@ -205,18 +209,96 @@
   }
 
   const storageApi = typeof QuoteStorage !== "undefined" ? QuoteStorage : null;
-  truckStore = storageApi
-    ? storageApi.createStore(getStorageBackend())
-    : {
-      load: () => ({ presets: [], selectedId: null }),
-      save: () => false,
+
+  function createLocalStores() {
+    const backend = getStorageBackend();
+    return {
+      truckStore: storageApi
+        ? storageApi.createStore(backend)
+        : {
+          load: () => ({ presets: [], selectedId: null }),
+          save: () => false,
+        },
+      jobStore: storageApi
+        ? storageApi.createJobStore(backend)
+        : {
+          load: () => ({ jobs: [] }),
+          save: () => false,
+        },
     };
-  jobStore = storageApi
-    ? storageApi.createJobStore(getStorageBackend())
-    : {
-      load: () => ({ jobs: [] }),
-      save: () => false,
-    };
+  }
+
+  function updateStorageLabels() {
+    if (storageIsShared) {
+      storagePill.textContent = "Shared · local network";
+      savedJobsScope.textContent = "Newest first · shared on this local network";
+      privacyNotice.textContent = "Calculations stay on the local network. No data leaves it.";
+    } else {
+      storagePill.textContent = "Offline · local only";
+      savedJobsScope.textContent = "Newest first · saved on this device only";
+      privacyNotice.textContent = "All calculations stay on this device. No data is sent anywhere.";
+    }
+  }
+
+  function getApiBase() {
+    if (typeof window === "undefined" || typeof fetch !== "function") {
+      return null;
+    }
+
+    if (window.location.protocol !== "http:" && window.location.protocol !== "https:") {
+      return null;
+    }
+
+    if (!storageApi || typeof storageApi.createRemoteStore !== "function") {
+      return null;
+    }
+
+    try {
+      return new URL("api", window.location.href).href.replace(/\/+$/, "");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async function detectStores() {
+    const apiBase = getApiBase();
+    if (!apiBase) {
+      return createLocalStores();
+    }
+
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 2500) : null;
+
+    try {
+      const response = await fetch(`${apiBase}/health`, {
+        cache: "no-store",
+        signal: controller ? controller.signal : undefined,
+      });
+
+      if (response.ok) {
+        const health = await response.json();
+        if (health && health.ok) {
+          storageIsShared = true;
+          return {
+            truckStore: storageApi.createRemoteStore(apiBase),
+            jobStore: storageApi.createRemoteJobStore(apiBase),
+          };
+        }
+      }
+    } catch (error) {
+      storageIsShared = false;
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+
+    return createLocalStores();
+  }
+
+  const localStores = createLocalStores();
+  truckStore = localStores.truckStore;
+  jobStore = localStores.jobStore;
 
   function format(value) {
     const number = Number(value);
@@ -1177,7 +1259,7 @@
     presetSaveRow.hidden = true;
   }
 
-  function saveTruckPreset() {
+  async function saveTruckPreset() {
     const name = presetNameInput.value.trim();
     if (!name) {
       setPresetWarning("Enter a preset name.");
@@ -1220,19 +1302,16 @@
 
     selectedTruckPresetId = preset.id;
     truckDirty = false;
-    const saved = truckStore.save({
-      presets: truckPresets,
-      selectedId: selectedTruckPresetId,
-    });
+    const saved = storageIsShared
+      ? await truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId })
+      : truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId });
     closePresetSaveForm();
     renderTruckPresetOptions();
     updateTruckPresetStatus();
-    setPresetWarning(saved
-      ? ""
-      : "Presets could not be saved in this browser. They will last until you reload.");
+    setPresetWarning(saved ? "" : "Presets could not be saved.");
   }
 
-  function deleteTruckPreset() {
+  async function deleteTruckPreset() {
     const preset = getSelectedTruckPreset();
     if (!preset) {
       return;
@@ -1245,25 +1324,25 @@
     truckPresets = truckPresets.filter((item) => item.id !== preset.id);
     selectedTruckPresetId = null;
     truckDirty = false;
-    const saved = truckStore.save({ presets: truckPresets, selectedId: null });
+    const saved = storageIsShared
+      ? await truckStore.save({ presets: truckPresets, selectedId: null })
+      : truckStore.save({ presets: truckPresets, selectedId: null });
     renderTruckPresetOptions();
     updateTruckPresetStatus();
-    setPresetWarning(saved
-      ? ""
-      : "Presets could not be saved in this browser. They will last until you reload.");
+    setPresetWarning(saved ? "" : "Presets could not be saved.");
   }
 
-  function handleTruckPresetChange() {
+  async function handleTruckPresetChange() {
     const id = truckPresetSelect.value;
 
     if (!id) {
       selectedTruckPresetId = null;
       truckDirty = false;
       deleteTruckPresetButton.disabled = true;
-      const saved = truckStore.save({ presets: truckPresets, selectedId: null });
-      setPresetWarning(saved
-        ? ""
-        : "Presets could not be saved in this browser. They will last until you reload.");
+      const saved = storageIsShared
+        ? await truckStore.save({ presets: truckPresets, selectedId: null })
+        : truckStore.save({ presets: truckPresets, selectedId: null });
+      setPresetWarning(saved ? "" : "Presets could not be saved.");
       updateTruckPresetStatus();
       return;
     }
@@ -1276,21 +1355,18 @@
     selectedTruckPresetId = preset.id;
     truckDirty = false;
     applyPresetToState(preset);
-    const saved = truckStore.save({
-      presets: truckPresets,
-      selectedId: selectedTruckPresetId,
-    });
-    setPresetWarning(saved
-      ? ""
-      : "Presets could not be saved in this browser. They will last until you reload.");
+    const saved = storageIsShared
+      ? await truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId })
+      : truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId });
+    setPresetWarning(saved ? "" : "Presets could not be saved.");
     syncStaticControls();
     renderTruckPresetOptions();
     updateTruckPresetStatus();
     update();
   }
 
-  function initTruckPresets() {
-    const stored = truckStore.load();
+  async function initTruckPresets() {
+    const stored = storageIsShared ? await truckStore.load() : truckStore.load();
     truckPresets = stored.presets;
     selectedTruckPresetId = stored.selectedId;
     const preset = getSelectedTruckPreset();
@@ -1412,7 +1488,7 @@
     return `${format(count)} ${truckWord(count)} · ${money(final.gst.rounded.total)}`;
   }
 
-  function saveJob() {
+  async function saveJob() {
     let name = jobNameInput.value.trim();
 
     if (!name) {
@@ -1434,12 +1510,15 @@
     };
 
     savedJobs = [job, ...savedJobs.filter((item) => item.id !== job.id)];
-    const saved = jobStore.save({ jobs: savedJobs });
+    const saved = storageIsShared
+      ? await jobStore.save({ jobs: savedJobs })
+      : jobStore.save({ jobs: savedJobs });
+    const savedLabel = storageIsShared ? "Saved to shared storage" : "Saved locally";
 
     setJobStatus(
       saved
-        ? `Saved locally · ${formatDateTime(now)}`
-        : "Could not save this job in this browser.",
+        ? `${savedLabel} · ${formatDateTime(now)}`
+        : "Could not save this job.",
       !saved
     );
   }
@@ -1525,13 +1604,15 @@
     closeLoadJobs();
   }
 
-  function deleteJob(job) {
+  async function deleteJob(job) {
     if (!window.confirm(`Delete job "${job.name}"?`)) {
       return;
     }
 
     savedJobs = savedJobs.filter((item) => item.id !== job.id);
-    const saved = jobStore.save({ jobs: savedJobs });
+    const saved = storageIsShared
+      ? await jobStore.save({ jobs: savedJobs })
+      : jobStore.save({ jobs: savedJobs });
 
     if (currentJobId === job.id) {
       currentJobId = null;
@@ -1541,12 +1622,12 @@
     renderSavedJobs();
 
     if (!saved) {
-      setJobStatus("Could not save this change in this browser.", true);
+      setJobStatus("Could not save this change.", true);
     }
   }
 
-  function initJobs() {
-    const stored = jobStore.load();
+  async function initJobs() {
+    const stored = storageIsShared ? await jobStore.load() : jobStore.load();
     savedJobs = stored.jobs;
     setJobStatus("Unsaved job");
   }
@@ -1599,11 +1680,12 @@
       const parsed = Backup.parseBackup(text);
       const mergedPresets = Backup.mergePresets(truckPresets, parsed.presets);
       const mergedJobs = Backup.mergeJobs(savedJobs, parsed.jobs);
-      const presetsSaved = truckStore.save({
-        presets: mergedPresets,
-        selectedId: selectedTruckPresetId,
-      });
-      const jobsSaved = jobStore.save({ jobs: mergedJobs });
+      const presetsSaved = storageIsShared
+        ? await truckStore.save({ presets: mergedPresets, selectedId: selectedTruckPresetId })
+        : truckStore.save({ presets: mergedPresets, selectedId: selectedTruckPresetId });
+      const jobsSaved = storageIsShared
+        ? await jobStore.save({ jobs: mergedJobs })
+        : jobStore.save({ jobs: mergedJobs });
 
       truckPresets = mergedPresets;
       savedJobs = mergedJobs;
@@ -1623,7 +1705,7 @@
         setDataStatus("No jobs or presets found in that file.", true);
       } else if (!presetsSaved || !jobsSaved) {
         setDataStatus(
-          `Imported ${countLabel(parsed.jobs.length, "job", "jobs")} and ${countLabel(parsed.presets.length, "preset", "presets")}, but could not save everything in this browser.`,
+          `Imported ${countLabel(parsed.jobs.length, "job", "jobs")} and ${countLabel(parsed.presets.length, "preset", "presets")}, but could not save everything.`,
           true
         );
       } else {
@@ -2104,8 +2186,16 @@
     setJobStatus("Unsaved job");
   });
 
-  initJobs();
-  initTruckPresets();
-  syncStaticControls();
-  renderSections();
+  async function init() {
+    const stores = await detectStores();
+    truckStore = stores.truckStore;
+    jobStore = stores.jobStore;
+    updateStorageLabels();
+    await initJobs();
+    await initTruckPresets();
+    syncStaticControls();
+    renderSections();
+  }
+
+  init();
 })();

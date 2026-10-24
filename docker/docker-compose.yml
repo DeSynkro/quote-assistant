@@ -1,0 +1,20 @@
+name: quote-assistant
+
+services:
+  quote-assistant:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: quote-assistant:local
+    container_name: quote-assistant
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "8080:8080"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      APP_DIR: "/app/app"
+      DATA_DIR: "/data"
+    volumes:
+      - ./data:/data
