@@ -41,13 +41,15 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 - Material cost, delivery pricing and combined spoil and delivery totals
 - Swell, price rounding and GST
 - Travel and fuel with round trips, truck fuel consumption, price per km and diesel price
+- Save, load and delete jobs locally
+- Automatic timestamp names when a job is unnamed
 - Live estimate, totals and validation warnings
 - Fully offline browser app
 
 ## Still planned
 
 - Material presets with density, swell and settling values
-- Save, load and name jobs
+- Export and import saved jobs and truck presets
 - Uneven fill areas and multiple material entries
 - Offline native apps for Windows, Linux and Android
 - Shared job list for Docker users on the same LAN

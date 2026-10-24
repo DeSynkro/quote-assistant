@@ -5,6 +5,13 @@
   const sectionCountEl = document.getElementById("section-count");
   const addSectionButton = document.getElementById("add-section");
   const newJobButton = document.getElementById("new-job");
+  const jobNameInput = document.getElementById("job-name");
+  const saveJobButton = document.getElementById("save-job");
+  const loadJobsButton = document.getElementById("load-jobs");
+  const jobStatusOutput = document.getElementById("job-status");
+  const loadJobsPanel = document.getElementById("load-jobs-panel");
+  const closeLoadJobsButton = document.getElementById("close-load-jobs");
+  const savedJobsList = document.getElementById("saved-jobs-list");
   const truckVolumeInput = document.getElementById("truck-volume");
   const truckWeightInput = document.getElementById("truck-weight");
   const truckPriceInput = document.getElementById("truck-price");
@@ -127,6 +134,16 @@
     };
   }
 
+  function createTruck() {
+    return {
+      capacityMode: "volume",
+      volumeCapacity: "6.5",
+      weightCapacity: "8",
+      pricePerTruck: "800",
+      fuelConsumption: "",
+    };
+  }
+
   const state = {
     sections: [
       createSection({
@@ -138,13 +155,7 @@
         rightLength: "3",
       }),
     ],
-    truck: {
-      capacityMode: "volume",
-      volumeCapacity: "6.5",
-      weightCapacity: "8",
-      pricePerTruck: "800",
-      fuelConsumption: "",
-    },
+    truck: createTruck(),
     swell: {
       enabled: false,
       percent: "30",
@@ -163,6 +174,10 @@
   let truckDirty = false;
   let truckPresetCounter = 0;
   let truckStore;
+  let savedJobs = [];
+  let currentJobId = null;
+  let jobCounter = 0;
+  let jobStore;
 
   function getStorageBackend() {
     try {
@@ -177,11 +192,22 @@
     return `truck-${Date.now()}-${truckPresetCounter}`;
   }
 
+  function createJobId() {
+    jobCounter += 1;
+    return `job-${Date.now()}-${jobCounter}`;
+  }
+
   const storageApi = typeof QuoteStorage !== "undefined" ? QuoteStorage : null;
   truckStore = storageApi
     ? storageApi.createStore(getStorageBackend())
     : {
       load: () => ({ presets: [], selectedId: null }),
+      save: () => false,
+    };
+  jobStore = storageApi
+    ? storageApi.createJobStore(getStorageBackend())
+    : {
+      load: () => ({ jobs: [] }),
       save: () => false,
     };
 
@@ -1130,6 +1156,218 @@
     updateTruckPresetStatus();
   }
 
+  function setJobStatus(text, warn) {
+    jobStatusOutput.textContent = text;
+    jobStatusOutput.classList.toggle("warn", Boolean(warn));
+  }
+
+  function formatDateTime(date) {
+    return new Intl.DateTimeFormat(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+
+  function formatSavedAt(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "Unknown date" : formatDateTime(date);
+  }
+
+  function serializeJobState() {
+    return {
+      sections: state.sections.map((section) => {
+        const copy = { ...section };
+        delete copy.id;
+        return copy;
+      }),
+      truck: { ...state.truck },
+      swell: { ...state.swell },
+      gst: { ...state.gst },
+      delivery: { ...state.delivery },
+      travel: { ...state.travel },
+      showRounded: state.showRounded,
+    };
+  }
+
+  function hydrateJobState(data) {
+    const source = data || {};
+    const savedSections = Array.isArray(source.sections) ? source.sections : [];
+
+    state.sections = savedSections.length > 0
+      ? savedSections.map((saved) => {
+        const fields = { ...(saved || {}) };
+        delete fields.id;
+        return createSection(fields);
+      })
+      : [createSection()];
+
+    state.truck = {
+      ...createTruck(),
+      ...(source.truck || {}),
+      capacityMode: "volume",
+    };
+    state.swell = {
+      enabled: false,
+      percent: "30",
+      ...(source.swell || {}),
+    };
+    state.gst = {
+      mode: "none",
+      rate: "10",
+      ...(source.gst || {}),
+    };
+    state.delivery = {
+      ...createDelivery(),
+      ...(source.delivery || {}),
+    };
+    state.travel = {
+      ...createTravel(),
+      ...(source.travel || {}),
+    };
+    state.showRounded = source.showRounded !== false;
+
+    selectedTruckPresetId = null;
+    truckDirty = false;
+  }
+
+  function makeJobSummary() {
+    const result = Calc.calculateJob(buildJob());
+    const hasExtras = Boolean(result.totals.delivery || result.totals.travel);
+    const final = hasExtras ? result.totals.combined : result.totals;
+    const count = final.trucks.rounded;
+    return `${format(count)} ${truckWord(count)} · ${money(final.gst.rounded.total)}`;
+  }
+
+  function saveJob() {
+    let name = jobNameInput.value.trim();
+
+    if (!name) {
+      name = `Job - ${formatDateTime(new Date())}`;
+      jobNameInput.value = name;
+    }
+
+    if (!currentJobId) {
+      currentJobId = createJobId();
+    }
+
+    const now = new Date();
+    const job = {
+      id: currentJobId,
+      name,
+      savedAt: now.toISOString(),
+      summary: makeJobSummary(),
+      data: serializeJobState(),
+    };
+
+    savedJobs = [job, ...savedJobs.filter((item) => item.id !== job.id)];
+    const saved = jobStore.save({ jobs: savedJobs });
+
+    setJobStatus(
+      saved
+        ? `Saved locally · ${formatDateTime(now)}`
+        : "Could not save this job in this browser.",
+      !saved
+    );
+  }
+
+  function renderSavedJobs() {
+    savedJobsList.innerHTML = "";
+
+    if (savedJobs.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "job-empty";
+      empty.textContent = "No saved jobs yet.";
+      savedJobsList.appendChild(empty);
+      return;
+    }
+
+    for (const job of savedJobs) {
+      const item = document.createElement("div");
+      item.className = "job-item";
+
+      const info = document.createElement("div");
+      const name = document.createElement("div");
+      name.className = "job-item-name";
+      name.textContent = job.name;
+      const meta = document.createElement("div");
+      meta.className = "job-item-meta";
+      meta.textContent = `${formatSavedAt(job.savedAt)} · ${job.summary || "No estimate"}`;
+      info.appendChild(name);
+      info.appendChild(meta);
+
+      const actions = document.createElement("div");
+      actions.className = "job-item-actions";
+
+      const loadButton = document.createElement("button");
+      loadButton.type = "button";
+      loadButton.className = "btn small";
+      loadButton.textContent = "Load";
+      loadButton.dataset.loadJob = job.id;
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "icon-btn";
+      deleteButton.textContent = "Delete";
+      deleteButton.dataset.deleteJob = job.id;
+
+      actions.appendChild(loadButton);
+      actions.appendChild(deleteButton);
+      item.appendChild(info);
+      item.appendChild(actions);
+      savedJobsList.appendChild(item);
+    }
+  }
+
+  function openLoadJobs() {
+    renderSavedJobs();
+    loadJobsPanel.hidden = false;
+  }
+
+  function closeLoadJobs() {
+    loadJobsPanel.hidden = true;
+  }
+
+  function loadJob(job) {
+    hydrateJobState(job.data);
+    jobNameInput.value = job.name;
+    currentJobId = job.id;
+    renderTruckPresetOptions();
+    updateTruckPresetStatus();
+    syncStaticControls();
+    renderSections();
+    setJobStatus(`Loaded · ${job.name}`);
+    closeLoadJobs();
+  }
+
+  function deleteJob(job) {
+    if (!window.confirm(`Delete job "${job.name}"?`)) {
+      return;
+    }
+
+    savedJobs = savedJobs.filter((item) => item.id !== job.id);
+    const saved = jobStore.save({ jobs: savedJobs });
+
+    if (currentJobId === job.id) {
+      currentJobId = null;
+      setJobStatus("Unsaved job");
+    }
+
+    renderSavedJobs();
+
+    if (!saved) {
+      setJobStatus("Could not save this change in this browser.", true);
+    }
+  }
+
+  function initJobs() {
+    const stored = jobStore.load();
+    savedJobs = stored.jobs;
+    setJobStatus("Unsaved job");
+  }
+
   function syncDeliveryControls() {
     deliveryEnabledInput.checked = state.delivery.enabled;
     deliveryCard.hidden = !state.delivery.enabled;
@@ -1431,6 +1669,41 @@
   sectionsEl.addEventListener("change", handleSectionInput);
   sectionsEl.addEventListener("click", handleSectionAction);
 
+  saveJobButton.addEventListener("click", saveJob);
+  loadJobsButton.addEventListener("click", openLoadJobs);
+  closeLoadJobsButton.addEventListener("click", closeLoadJobs);
+
+  loadJobsPanel.addEventListener("click", (event) => {
+    if (event.target === loadJobsPanel) {
+      closeLoadJobs();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !loadJobsPanel.hidden) {
+      closeLoadJobs();
+    }
+  });
+
+  savedJobsList.addEventListener("click", (event) => {
+    const loadButton = event.target.closest("[data-load-job]");
+    if (loadButton) {
+      const job = savedJobs.find((item) => item.id === loadButton.dataset.loadJob);
+      if (job) {
+        loadJob(job);
+      }
+      return;
+    }
+
+    const deleteButton = event.target.closest("[data-delete-job]");
+    if (deleteButton) {
+      const job = savedJobs.find((item) => item.id === deleteButton.dataset.deleteJob);
+      if (job) {
+        deleteJob(job);
+      }
+    }
+  });
+
   addSectionButton.addEventListener("click", () => {
     state.sections.push(createSection());
     renderSections();
@@ -1451,11 +1724,15 @@
     state.sections = [createSection()];
     state.delivery = createDelivery();
     state.travel = createTravel();
+    currentJobId = null;
+    jobNameInput.value = "";
     syncDeliveryControls();
     syncTravelControls();
     renderSections();
+    setJobStatus("Unsaved job");
   });
 
+  initJobs();
   initTruckPresets();
   syncStaticControls();
   renderSections();

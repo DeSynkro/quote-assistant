@@ -117,6 +117,83 @@ function createCases(QuoteStorage) {
         assert.equal(store.save({ presets: [], selectedId: null }), false);
       },
     },
+    {
+      name: "loads empty job storage",
+      run() {
+        const store = QuoteStorage.createJobStore(memoryBackend());
+        assert.deepEqual(store.load(), { jobs: [] });
+      },
+    },
+    {
+      name: "saves and loads jobs",
+      run() {
+        const store = QuoteStorage.createJobStore(memoryBackend());
+        const jobs = [
+          {
+            id: "job-1",
+            name: "Front yard",
+            savedAt: "2026-10-24T15:00:00.000Z",
+            summary: "2 trucks · $1,234",
+            data: {
+              sections: [],
+              truck: { volumeCapacity: "6.5" },
+            },
+          },
+        ];
+        assert.equal(store.save({ jobs }), true);
+        assert.deepEqual(store.load(), { jobs });
+      },
+    },
+    {
+      name: "ignores invalid job JSON",
+      run() {
+        const backend = memoryBackend();
+        backend.setItem(QuoteStorage.JOB_KEY, "{not json");
+        const store = QuoteStorage.createJobStore(backend);
+        assert.deepEqual(store.load(), { jobs: [] });
+      },
+    },
+    {
+      name: "ignores an unknown job schema version",
+      run() {
+        const backend = memoryBackend();
+        backend.setItem(QuoteStorage.JOB_KEY, JSON.stringify({
+          schemaVersion: 99,
+          jobs: [
+            { id: "job-1", name: "Front yard", savedAt: "", data: {} },
+          ],
+        }));
+        const store = QuoteStorage.createJobStore(backend);
+        assert.deepEqual(store.load(), { jobs: [] });
+      },
+    },
+    {
+      name: "filters invalid jobs",
+      run() {
+        const backend = memoryBackend();
+        backend.setItem(QuoteStorage.JOB_KEY, JSON.stringify({
+          schemaVersion: 1,
+          jobs: [
+            { id: "", name: "No id", savedAt: "", data: {} },
+            { id: "job-2", name: "", savedAt: "", data: {} },
+            { id: "job-3", name: "No data", savedAt: "" },
+            { id: "job-4", name: "Valid", savedAt: "", data: {} },
+          ],
+        }));
+        const store = QuoteStorage.createJobStore(backend);
+        const loaded = store.load();
+        assert.equal(loaded.jobs.length, 1);
+        assert.equal(loaded.jobs[0].id, "job-4");
+      },
+    },
+    {
+      name: "handles unavailable job storage",
+      run() {
+        const store = QuoteStorage.createJobStore(null);
+        assert.deepEqual(store.load(), { jobs: [] });
+        assert.equal(store.save({ jobs: [] }), false);
+      },
+    },
   ];
 }
 

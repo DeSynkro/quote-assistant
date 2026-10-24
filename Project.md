@@ -11,8 +11,8 @@ UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-
 - Calculation engine: `app/calc.js`.
 - Manual test sandbox: `tests/tests.html`.
 - Terminal tests: `node tests/run-tests.js`.
-- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, travel and fuel, combined totals, warnings and the browser UI.
-- Not yet built: material presets, job save and load, uneven fill areas, multiple materials, native packaging and Docker sharing.
+- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, travel and fuel, job save/load, combined totals, warnings and the browser UI.
+- Not yet built: material presets, uneven fill areas, multiple materials, native packaging and Docker sharing.
 
 ---
 
@@ -84,8 +84,8 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   creates a new preset, leaving the old one intact.
 - Presets are stored locally with a versioned schema.
 - Docker will share presets with LAN users in the Docker milestone.
-- Saved jobs will store the truck values themselves, not only a preset ID, so
-  editing a preset later does not change an old quote.
+- Saved jobs store the truck values themselves, not only a preset ID, so editing
+  a preset later does not change an old quote.
 
 ### Job structure
 - A job is modular: multiple sections, each added with an "Add More" button.
@@ -193,23 +193,27 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Prefer descriptive labels over bare jargon, e.g. "Apply swell (material
   expansion)" and "Settling allowance".
 
-### Saved jobs (added during discussion)
-- Jobs can be **saved**, named, and loaded again later.
-- Start-up offers **New** or **Load**; within a job there are New / Save / Load
-  controls.
+### Saved jobs (implemented for the browser build)
+- Jobs can be saved, named, loaded and deleted.
+- The job bar has a name/address field and New / Save / Load controls.
 - The job name/address is optional. If left blank when saving, the job is saved
   with an automatic timestamp name (e.g. "Job - 24 Oct 2026, 10:46") and can be
-  renamed later - no interrupting prompt required.
-- Load shows saved jobs newest first, with name, date and result summary; loading
-  replaces the current job. Jobs can be deleted from the list.
-- New starts a blank job; if there are unsaved changes, confirm before discarding.
-- **Native apps:** jobs are saved as plain JSON in the OS app data folder and stay
-  on that device.
-- **Docker web app:** jobs are saved as plain JSON in the Docker data folder and
-  are shared by all LAN users.
+  renamed later.
+- Save stores the job inputs: sections, truck snapshot, swell, GST, delivery,
+  travel and the rounding display setting. Totals are recalculated on load.
+- The truck preset selection is not relied on. The saved truck values are
+  restored and the preset selector becomes Custom / unsaved.
+- Load shows saved jobs newest first with name, date and a saved summary.
+  Loading replaces the current job. Jobs can be deleted from the list.
+- Save updates the currently loaded job. New clears the current job ID and name,
+  keeps the truck settings and saved presets, and starts a blank job.
+- Storage is versioned.
+- The current browser build uses `localStorage`. Native and Docker storage
+  backends are planned, along with export/import to move jobs between them.
 - No cloud, no internet sync and no accounts.
 
-### Data and sharing (added during discussion)
+### Data and sharing (planned for native and Docker)
+- The current browser build stores jobs in localStorage.
 - Native and Docker job lists are separate in v1. There is no automatic sync
   between them.
 - Docker stores one pretty-printed JSON file per job. No SQLite and no database

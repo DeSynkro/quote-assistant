@@ -15,9 +15,26 @@
     </div>
     <div class="header-actions">
       <span class="pill green">Offline · local only</span>
-      <button class="btn" id="new-job" type="button">New job</button>
     </div>
   </header>
+
+  <div class="card jobbar">
+    <div class="jobbar-row">
+      <label class="field">
+        <span>Job name or address (optional)</span>
+        <input id="job-name" type="text" placeholder="Leave blank to save with the date and time">
+      </label>
+      <div class="jobbar-actions">
+        <button class="btn" id="new-job" type="button">New</button>
+        <button class="btn primary" id="save-job" type="button">Save</button>
+        <button class="btn" id="load-jobs" type="button">Load</button>
+      </div>
+    </div>
+    <div class="jobbar-meta">
+      <span class="pill" id="job-status">Unsaved job</span>
+      <span class="small muted">Saved jobs stay on this device.</span>
+    </div>
+  </div>
 
   <div class="layout">
     <section class="main-column">
@@ -419,6 +436,17 @@
     </aside>
   </div>
 </main>
+
+<div class="overlay" id="load-jobs-panel" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label="Load job">
+    <div class="dialog-head">
+      <h2>Load job</h2>
+      <button class="icon-btn" id="close-load-jobs" type="button">Close</button>
+    </div>
+    <div class="small muted">Newest first · saved on this device only</div>
+    <div id="saved-jobs-list"></div>
+  </div>
+</div>
 
 <script src="calc.js"></script>
 <script src="storage.js"></script>
