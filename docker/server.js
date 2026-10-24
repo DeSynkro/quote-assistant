@@ -426,6 +426,7 @@ function createServer(options) {
 
 if (require.main === module) {
   const port = Number(process.env.PORT) || 8080;
+  const publicPort = Number(process.env.PUBLIC_PORT) || port;
   const host = process.env.HOST || "0.0.0.0";
   const server = createServer({
     appDir: process.env.APP_DIR,
@@ -433,7 +434,8 @@ if (require.main === module) {
   });
 
   server.listen(port, host, () => {
-    console.log(`Quote Assistant listening on http://${host}:${port}`);
+    const hostPortNote = publicPort !== port ? ` (host port ${publicPort})` : "";
+    console.log(`Quote Assistant listening on http://${host}:${port}${hostPortNote}`);
   });
 }
 
