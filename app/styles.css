@@ -230,6 +230,32 @@ h1 {
   font-size: 13px;
 }
 
+.delivery-item {
+  margin-bottom: 10px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .015), transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.delivery-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.delivery-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.icon-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
 .data-actions {
   display: flex;
   gap: 8px;
@@ -686,6 +712,38 @@ select:focus {
 .result-sub {
   color: var(--muted);
   font-size: 12px;
+}
+
+.price-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.price-options .check-row span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.price-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.price-option-row select {
+  width: 150px;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+}
+
+.price-option-row input[type="number"] {
+  width: 72px;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 12.5px;
 }
 
 .summary {

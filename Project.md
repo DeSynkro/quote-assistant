@@ -11,7 +11,7 @@ UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-
 - Calculation engine: `app/calc.js`.
 - Manual test sandbox: `tests/tests.html`.
 - Terminal tests: `node tests/run-tests.js`.
-- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, travel and fuel, job save/load, data export/import, combined totals, warnings and the browser UI.
+- Working: section shapes, per-section swell, truck loads, truck presets, price, rounding, GST, multiple material deliveries, delivery pricing, travel and fuel, job save/load, data export/import, combined totals, warnings and the browser UI.
 - Not yet built: material presets, uneven fill areas, multiple materials, native packaging and Docker sharing.
 
 ---
@@ -87,15 +87,17 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Saved jobs store the truck values themselves, not only a preset ID, so editing
   a preset later does not change an old quote.
 
-### Job structure
-- A job is modular: multiple sections, each added with an "Add More" button.
-- Each section has a shape mode and a material choice.
+### Removals
+- A job is modular: multiple removal sections, each added with "+ Add removal".
+- Removals can be disabled for jobs that only bring material in.
+- Each removal section has a shape mode.
 - **Rectangle:** width × length × depth. This is the default.
 - **Uneven ends:** width across, left length, right length and depth. The area
   uses the average of the two ends.
 - **Manual area:** area in m² × depth.
 - **Manual volume:** enter the volume in m³ directly.
-- Sections are independent and can be added, duplicated, removed, and reordered.
+- Removal sections are independent and can be added, duplicated, removed, and
+  reordered.
 - For L-shapes and other complex outlines, split the area into multiple sections
   or use manual area.
 
@@ -107,8 +109,10 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 
 ### Swell / bulking
 - Excavated material expands; in-ground volume is not truck volume.
-- Swell is applied per job via a checkbox plus a % input, **off by default**.
-- Presets may suggest a swell figure, but it stays off until enabled.
+- Each section has its own Apply swell checkbox and percent input.
+- Swell is **off by default** and the default percent shown is **5%**.
+- Sections can use different swell values.
+- There is no global swell control.
 
 ### Units
 - Units are per field, not one global unit.
@@ -132,7 +136,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Some jobs also require material to be brought **to** the site, not just spoil
   removed.
 - A per-job toggle ("Bringing material to site?") reveals the Material In card.
-- One material entry per job in v1.
+- Multiple material entries per job, added with "+ Add material". Each entry has its own name, amount, price and delivery pricing. Entries can be duplicated or removed.
 - Amount methods: direct volume (m³), direct weight (tonnes), or area × depth.
 - Direct volume and area × depth use a settling allowance to convert finished
   fill into loose delivered volume. Direct volume can choose whether to apply
@@ -141,6 +145,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Material price is per m³ for volume and area, and per tonne for weight.
 - Delivery uses volume capacity for volume and area amounts, and weight capacity
   for direct weight. This is independent of the spoil capacity mode.
+- Each material entry calculates its own trucks and cost. Totals aggregate across all entries.
 - Delivery pricing options:
   - Custom fee per truck (default).
   - Use the main truck rate.
@@ -153,7 +158,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Combined price is spoil price plus material cost plus delivery trip cost.
 - GST is applied to the combined charge.
 - Area × depth is a rectangle in v1. Use direct volume for irregular fill areas.
-- Multiple materials and uneven fill areas are later additions.
+- Uneven fill areas are a later addition.
 
 ### Travel and fuel (implemented)
 - Optional toggle below Material In, disabled by default.
@@ -195,8 +200,9 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - The job name/address is optional. If left blank when saving, the job is saved
   with an automatic timestamp name (e.g. "Job - 24 Oct 2026, 10:46") and can be
   renamed later.
-- Save stores the job inputs: sections, truck snapshot, swell, GST, delivery,
-  travel and the rounding display setting. Totals are recalculated on load.
+- Save stores the job inputs: removals, truck snapshot, per-section swell, GST,
+  material deliveries, travel and the rounding display setting. Totals are
+  recalculated on load.
 - The truck preset selection is not relied on. The saved truck values are
   restored and the preset selector becomes Custom / unsaved.
 - Load shows saved jobs newest first with name, date and a saved summary.
@@ -238,6 +244,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 
 ### Output
 - Fractional truck count (e.g. 1.5 trucks) and price (rate × trucks).
+- Round up, GST mode and GST rate controls sit below the Estimated charge.
 - Optional **Round up** toggle: rounds the truck count up (1.5 → 2), updates the
   price accordingly, and still shows the exact decimal alongside the rounded
   figure - e.g. `1.5 (rounded to 2)`.

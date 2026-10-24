@@ -3,6 +3,8 @@
 
   const sectionsEl = document.getElementById("sections");
   const sectionCountEl = document.getElementById("section-count");
+  const removalsEnabledInput = document.getElementById("removals-enabled");
+  const removalsCard = document.getElementById("removals-card");
   const addSectionButton = document.getElementById("add-section");
   const newJobButton = document.getElementById("new-job");
   const jobNameInput = document.getElementById("job-name");
@@ -29,8 +31,6 @@
   const cancelTruckPresetButton = document.getElementById("cancel-truck-preset");
   const truckPresetStatus = document.getElementById("truck-preset-status");
   const truckPresetWarning = document.getElementById("truck-preset-warning");
-  const swellEnabledInput = document.getElementById("swell-enabled");
-  const swellPercentInput = document.getElementById("swell-percent");
   const roundUpInput = document.getElementById("round-up");
   const gstModeInput = document.getElementById("gst-mode");
   const gstRateInput = document.getElementById("gst-rate");
@@ -45,14 +45,11 @@
   const mathsOutput = document.getElementById("maths");
   const deliveryEnabledInput = document.getElementById("delivery-enabled");
   const deliveryCard = document.getElementById("delivery-card");
-  const deliveryAmountFields = document.getElementById("delivery-amount-fields");
-  const deliveryAmountUnit = document.getElementById("delivery-amount-unit");
-  const deliveryAreaFields = document.getElementById("delivery-area-fields");
-  const deliverySettlingFields = document.getElementById("delivery-settling-fields");
-  const deliverySettlingPercentField = document.getElementById("delivery-settling-percent-field");
-  const deliveryAddSettlingField = document.getElementById("delivery-add-settling-field");
-  const deliveryPriceUnit = document.getElementById("delivery-price-unit");
-  const deliveryCustomFeeField = document.getElementById("delivery-custom-fee-field");
+  const deliveriesContainer = document.getElementById("deliveries");
+  const addDeliveryButton = document.getElementById("add-delivery");
+  const deliveryCountEl = document.getElementById("delivery-count");
+  const volumeRow = document.getElementById("result-volume-row");
+  const spoilTrucksRow = document.getElementById("result-spoil-trucks-row");
   const trucksLabelOutput = document.getElementById("result-trucks-label");
   const materialRow = document.getElementById("result-material-row");
   const materialLabel = document.getElementById("result-material-label");
@@ -98,6 +95,8 @@
       manualVolume: "",
       depth: "",
       depthUnit: "mm",
+      swellEnabled: false,
+      swellPercent: "5",
     }, overrides);
   }
 
@@ -117,9 +116,14 @@
     };
   }
 
-  function createDelivery() {
-    return {
-      enabled: false,
+  function createDeliveryId() {
+    deliveryCounter += 1;
+    return `delivery-${Date.now()}-${deliveryCounter}`;
+  }
+
+  function createDeliveryItem(overrides) {
+    return Object.assign({
+      id: createDeliveryId(),
       materialName: "",
       amountBasis: "volume",
       amount: "",
@@ -134,7 +138,7 @@
       price: "",
       deliveryMode: "custom",
       customFee: "",
-    };
+    }, overrides || {});
   }
 
   function createTruck() {
@@ -147,7 +151,10 @@
     };
   }
 
+  let deliveryCounter = 0;
+
   const state = {
+    removalsEnabled: true,
     sections: [
       createSection({
         width: "10",
@@ -159,15 +166,12 @@
       }),
     ],
     truck: createTruck(),
-    swell: {
-      enabled: false,
-      percent: "30",
-    },
     gst: {
       mode: "none",
       rate: "10",
     },
-    delivery: createDelivery(),
+    deliveries: [createDeliveryItem()],
+    deliveryEnabled: false,
     travel: createTravel(),
     showRounded: true,
   };
@@ -256,7 +260,7 @@
   function sectionMarkup() {
     return `
       <div class="section-top">
-        <input class="section-name" type="text" data-field="name" placeholder="Section name or address (optional)" aria-label="Section name">
+        <input class="section-name" type="text" data-field="name" placeholder="Removal name or address (optional)" aria-label="Removal name">
         <div class="section-actions">
           <button class="icon-btn" type="button" data-action="duplicate">Duplicate</button>
           <button class="icon-btn" type="button" data-action="remove">Remove</button>
@@ -350,9 +354,122 @@
         </label>
       </div>
 
+      <div class="fields one">
+        <label class="field">
+          <span>Apply swell</span>
+          <span class="check-row">
+            <input type="checkbox" data-field="swellEnabled">
+            <input type="number" inputmode="decimal" step="any" data-field="swellPercent" value="5" aria-label="Swell percent">
+            <span class="muted small">%</span>
+          </span>
+        </label>
+      </div>
+
       <div class="section-foot">
         <span class="chip" data-role="section-result">No volume</span>
         <span class="small muted" data-role="section-formula"></span>
+      </div>
+    `;
+  }
+
+  function deliveryItemMarkup() {
+    return `
+      <div class="delivery-top">
+        <input class="section-name" type="text" data-delivery-field="materialName" placeholder="Material name or type (optional)" aria-label="Material name">
+        <div class="section-actions">
+          <button class="icon-btn" type="button" data-action="duplicate-delivery">Duplicate</button>
+          <button class="icon-btn" type="button" data-action="remove-delivery">Remove</button>
+        </div>
+      </div>
+
+      <div class="fields one">
+        <label class="field">
+          <span>Amount method</span>
+          <select data-delivery-field="amountBasis">
+            <option value="volume">Direct volume</option>
+            <option value="weight">Direct weight</option>
+            <option value="area">Area × depth</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="fields one" data-delivery-amount-fields>
+        <label class="field">
+          <span>Amount to deliver</span>
+          <span class="with-unit">
+            <input type="number" inputmode="decimal" step="any" data-delivery-field="amount" placeholder="0">
+            <span class="unit" data-role="amount-unit">m³</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="fields three" data-delivery-area-fields hidden>
+        <label class="field">
+          <span>Width</span>
+          <span class="with-unit">
+            <input type="number" inputmode="decimal" step="any" data-delivery-field="width" placeholder="0">
+            <select data-delivery-field="widthUnit" aria-label="Delivery width unit">${unitOptions(["m", "cm", "mm"])}</select>
+          </span>
+        </label>
+        <label class="field">
+          <span>Length</span>
+          <span class="with-unit">
+            <input type="number" inputmode="decimal" step="any" data-delivery-field="length" placeholder="0">
+            <select data-delivery-field="lengthUnit" aria-label="Delivery length unit">${unitOptions(["m", "cm", "mm"])}</select>
+          </span>
+        </label>
+        <label class="field">
+          <span>Depth</span>
+          <span class="with-unit">
+            <input type="number" inputmode="decimal" step="any" data-delivery-field="depth" placeholder="0">
+            <select data-delivery-field="depthUnit" aria-label="Delivery depth unit">${unitOptions(["mm", "cm", "m"])}</select>
+          </span>
+        </label>
+      </div>
+
+      <div class="fields" data-delivery-settling-fields>
+        <label class="field" data-delivery-settling-percent-field>
+          <span>Settling allowance</span>
+          <span class="with-unit">
+            <input type="number" inputmode="decimal" step="any" data-delivery-field="settlingPercent" value="10">
+            <span class="unit">%</span>
+          </span>
+        </label>
+        <label class="field" data-delivery-add-settling-field>
+          <span>Apply to direct volume</span>
+          <span class="check-row">
+            <input type="checkbox" data-delivery-field="addSettling">
+            <span>Yes</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="fields one">
+        <label class="field">
+          <span>Material price</span>
+          <span class="with-unit">
+            <input type="number" inputmode="decimal" step="any" data-delivery-field="price" placeholder="0">
+            <span class="unit" data-role="price-unit">/ m³</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="fields">
+        <label class="field">
+          <span>Delivery pricing</span>
+          <select data-delivery-field="deliveryMode">
+            <option value="custom">Custom fee per truck</option>
+            <option value="truckRate">Use main truck rate</option>
+            <option value="included">Included in material price</option>
+          </select>
+        </label>
+        <label class="field" data-delivery-custom-fee-field hidden>
+          <span>Custom fee per truck</span>
+          <span class="with-unit">
+            <input type="number" inputmode="decimal" step="any" data-delivery-field="customFee" placeholder="0">
+            <span class="unit">$</span>
+          </span>
+        </label>
       </div>
     `;
   }
@@ -387,6 +504,11 @@
     if (depthField) {
       depthField.hidden = shape === "manualVolume";
     }
+
+    const swellPercent = card.querySelector('[data-field="swellPercent"]');
+    if (swellPercent) {
+      swellPercent.disabled = !section.swellEnabled;
+    }
   }
 
   function renderSections() {
@@ -403,7 +525,7 @@
     }
 
     const count = state.sections.length;
-    sectionCountEl.textContent = `${count} section${count === 1 ? "" : "s"}`;
+    sectionCountEl.textContent = `${count} removal${count === 1 ? "" : "s"}`;
     update();
   }
 
@@ -413,6 +535,8 @@
     const item = {
       name: source.name,
       shape,
+      swellEnabled: source.swellEnabled,
+      swellPercent: source.swellPercent,
     };
 
     if (shape === "manualVolume") {
@@ -448,6 +572,7 @@
     const truck = source.truck || createTruck();
 
     return {
+      removalsEnabled: source.removalsEnabled !== false,
       sections: sections.map(buildCalcSection),
       truck: {
         capacityMode: truck.capacityMode || "volume",
@@ -455,10 +580,14 @@
         weightCapacity: truck.weightCapacity,
         fuelConsumption: truck.fuelConsumption,
       },
-      swell: source.swell || { enabled: false, percent: 0 },
+      swell: source.swell,
       pricePerTruck: truck.pricePerTruck,
       gst: source.gst || { mode: "none", rate: 0 },
-      delivery: source.delivery || { enabled: false },
+      deliveries: Array.isArray(source.deliveries)
+        ? (source.deliveryEnabled === false ? [] : source.deliveries)
+        : source.delivery && source.delivery.enabled
+          ? [source.delivery]
+          : [],
       travel: source.travel || { enabled: false },
     };
   }
@@ -512,6 +641,9 @@
       chip.classList.add("warn");
     } else if (section.shape === "manualVolume") {
       let text = `${format(resultSection.volume)} m³`;
+      if (resultSection.looseVolume !== resultSection.volume) {
+        text += ` · ${format(resultSection.looseVolume)} m³ loose`;
+      }
       if (resultSection.weight !== null) {
         text += ` · ${format(resultSection.weight)} t`;
       }
@@ -519,6 +651,9 @@
       chip.classList.remove("warn");
     } else {
       let text = `${format(resultSection.area)} m² · ${format(resultSection.volume)} m³`;
+      if (resultSection.looseVolume !== resultSection.volume) {
+        text += ` · ${format(resultSection.looseVolume)} m³ loose`;
+      }
       if (resultSection.weight !== null) {
         text += ` · ${format(resultSection.weight)} t`;
       }
@@ -579,11 +714,23 @@
     if (delivery.weight !== null) {
       return `${format(delivery.weight)} t`;
     }
-    return "0 m³";
+    return `${delivery.items.length} materials`;
+  }
+
+  function deliverySummaryAmount(delivery) {
+    if (delivery.deliveredVolume !== null) {
+      return `${format(delivery.deliveredVolume)} m³ of material`;
+    }
+    if (delivery.weight !== null) {
+      return `${format(delivery.weight)} t of material`;
+    }
+    return `${delivery.items.length} materials`;
   }
 
   function materialHasAmount(delivery) {
-    return delivery.deliveredVolume !== null || delivery.weight !== null;
+    return delivery.items.some(
+      (item) => item.deliveredVolume !== null || item.weight !== null
+    );
   }
 
   function travelSummaryText(travel, showRounded) {
@@ -684,14 +831,19 @@
     const finalGst = hasExtras ? totals.combined.gst : totals.gst;
     mathsOutput.innerHTML = "";
 
-    if (result.sections.length === 0) {
-      appendMathRow("No spoil sections.");
+    if (!state.removalsEnabled) {
+      appendMathRow("Removals disabled.");
+    } else if (result.sections.length === 0) {
+      appendMathRow("No removal sections.");
     } else {
       for (const section of result.sections) {
         const details = section.area === null
           ? `${format(section.volume)} m³`
           : `${format(section.area)} m² · ${format(section.volume)} m³`;
-        appendMathRow(`${section.name}: ${details}`);
+        const loose = section.looseVolume !== section.volume
+          ? ` → ${format(section.looseVolume)} m³ loose`
+          : "";
+        appendMathRow(`${section.name}: ${details}${loose}`);
       }
       appendMathRow(`Spoil in ground: ${format(totals.volumeInGround)} m³`);
       appendMathRow(`Spoil loose after swell: ${format(totals.volumeLoose)} m³`);
@@ -705,24 +857,30 @@
     }
 
     if (delivery) {
-      appendMathRow(`Material: ${delivery.materialName || "material"}`);
+      for (const item of delivery.items) {
+        appendMathRow(`Material: ${item.materialName || "material"}`);
 
-      if (delivery.finishedVolume !== null) {
-        appendMathRow(`Finished fill volume: ${format(delivery.finishedVolume)} m³`);
+        if (item.finishedVolume !== null) {
+          appendMathRow(`Finished fill volume: ${format(item.finishedVolume)} m³`);
+        }
+
+        if (item.deliveredVolume !== null) {
+          appendMathRow(`Delivered volume: ${format(item.deliveredVolume)} m³`);
+        }
+
+        if (item.weight !== null) {
+          appendMathRow(`Material weight: ${format(item.weight)} t`);
+        }
+
+        appendMathRow(`Material cost: ${money(item.materialCost)}`);
+        appendMathRow(`Delivery trucks: ${format(item.trucks.exact)} exact · ${item.trucks.rounded} rounded`);
+        appendMathRow(`Delivery trips: ${money(item.tripCost.exact)} exact · ${money(item.tripCost.rounded)} rounded`);
+        appendMathRow(`Delivery total: ${money(item.total.exact)} exact · ${money(item.total.rounded)} rounded`);
       }
 
-      if (delivery.deliveredVolume !== null) {
-        appendMathRow(`Delivered volume: ${format(delivery.deliveredVolume)} m³`);
+      if (delivery.items.length > 1) {
+        appendMathRow(`Materials total: ${money(delivery.total.exact)} exact · ${money(delivery.total.rounded)} rounded`);
       }
-
-      if (delivery.weight !== null) {
-        appendMathRow(`Material weight: ${format(delivery.weight)} t`);
-      }
-
-      appendMathRow(`Material cost: ${money(delivery.materialCost)}`);
-      appendMathRow(`Delivery trucks: ${format(delivery.trucks.exact)} exact · ${delivery.trucks.rounded} rounded`);
-      appendMathRow(`Delivery trips: ${money(delivery.tripCost.exact)} exact · ${money(delivery.tripCost.rounded)} rounded`);
-      appendMathRow(`Delivery total: ${money(delivery.total.exact)} exact · ${money(delivery.total.rounded)} rounded`);
     }
 
     if (travel) {
@@ -761,6 +919,7 @@
     const travel = totals.travel;
     const combined = totals.combined;
     const showRounded = state.showRounded;
+    const removalsEnabled = state.removalsEnabled;
     const hasExtras = Boolean(delivery || travel);
     const finalTrucks = hasExtras ? combined.trucks : totals.trucks;
     const finalGst = hasExtras ? combined.gst : totals.gst;
@@ -786,6 +945,8 @@
     spoilParts.push(moneyPair(totals.price.rounded, totals.price.exact, showRounded));
     limitOutput.textContent = spoilParts.join(" · ");
 
+    volumeRow.hidden = !removalsEnabled;
+    spoilTrucksRow.hidden = !removalsEnabled;
     materialRow.hidden = !delivery;
     combinedRow.hidden = !delivery;
     travelRow.hidden = !travel;
@@ -804,9 +965,13 @@
     }
 
     if (delivery) {
-      materialLabel.textContent = delivery.materialName
-        ? `Material to bring in: ${delivery.materialName}`
-        : "Material to bring in";
+      const materialNames = delivery.items
+        .map((item) => item.materialName)
+        .filter(Boolean);
+
+      materialLabel.textContent = delivery.items.length === 1 && materialNames[0]
+        ? `Material to bring in: ${materialNames[0]}`
+        : `Materials to bring in (${delivery.items.length})`;
       materialVolumeOutput.textContent = materialAmountText(delivery);
 
       if (!materialHasAmount(delivery)) {
@@ -814,18 +979,18 @@
       } else if (delivery.materialCost <= 0) {
         materialSubOutput.textContent = "Enter the material price.";
       } else {
-        const parts = [];
-        if (delivery.deliveredVolume !== null && delivery.weight !== null) {
-          parts.push(`${format(delivery.weight)} t`);
-        }
-        parts.push(truckValueText(delivery.trucks, showRounded));
+        const parts = [truckValueText(delivery.trucks, showRounded)];
         if (showRounded && delivery.trucks.rounded !== delivery.trucks.exact) {
           parts.push(`${format(delivery.trucks.exact)} exact`);
         }
-        if (delivery.trucks.limit === "volume") {
-          parts.push("volume-limited");
-        } else if (delivery.trucks.limit === "weight") {
-          parts.push("weight-limited");
+        if (delivery.items.length === 1) {
+          if (delivery.trucks.limit === "volume") {
+            parts.push("volume-limited");
+          } else if (delivery.trucks.limit === "weight") {
+            parts.push("weight-limited");
+          }
+        } else {
+          parts.push(`${delivery.items.length} materials`);
         }
         parts.push(moneyPair(delivery.total.rounded, delivery.total.exact, showRounded));
         materialSubOutput.textContent = parts.join(" · ");
@@ -833,7 +998,11 @@
 
       combinedTrucksOutput.textContent = truckValueText(combined.trucks, showRounded);
 
-      const combinedParts = [travel ? "Spoil, delivery and fuel" : "Spoil and delivery trips"];
+      const combinedParts = [
+        travel
+          ? (removalsEnabled ? "Spoil, delivery and fuel" : "Delivery and fuel")
+          : (removalsEnabled ? "Spoil and delivery trips" : "Delivery trips"),
+      ];
       if (showRounded && combined.trucks.rounded !== combined.trucks.exact) {
         combinedParts.push(`${format(combined.trucks.exact)} exact`);
       }
@@ -858,9 +1027,11 @@
 
     if (delivery) {
       if (!materialHasAmount(delivery)) {
-        summaryOutput.textContent = totals.volumeInGround > 0
-          ? "Spoil estimate is ready. Add the material amount and price to include delivery."
-          : "Add job dimensions and material details to see an estimate.";
+        summaryOutput.textContent = !removalsEnabled
+          ? "Add the material amount and price to see an estimate."
+          : totals.volumeInGround > 0
+            ? "Spoil estimate is ready. Add the material amount and price to include delivery."
+            : "Add job dimensions and material details to see an estimate.";
       } else {
         const charge = money(showRounded ? finalGst.rounded.total : finalGst.exact.total);
         let summary = "";
@@ -873,7 +1044,7 @@
           summary += ". ";
         }
 
-        summary += `Bring in ${materialAmountText(delivery)} of material. `;
+        summary += `Bring in ${deliverySummaryAmount(delivery)}. `;
         summary += travelSummaryText(travel, showRounded);
 
         if (finalTrucks.exact > 0) {
@@ -888,6 +1059,8 @@
 
         summaryOutput.textContent = summary;
       }
+    } else if (!removalsEnabled) {
+      summaryOutput.textContent = "Add materials to see an estimate.";
     } else if (totals.volumeInGround <= 0) {
       summaryOutput.textContent = "Add valid job dimensions to see an estimate.";
     } else if (totals.trucks.exact <= 0) {
@@ -1152,15 +1325,16 @@
 
   function serializeJobState() {
     return {
+      removalsEnabled: state.removalsEnabled,
       sections: state.sections.map((section) => {
         const copy = { ...section };
         delete copy.id;
         return copy;
       }),
       truck: { ...state.truck },
-      swell: { ...state.swell },
       gst: { ...state.gst },
-      delivery: { ...state.delivery },
+      deliveries: state.deliveries.map(({ id, ...item }) => ({ ...item })),
+      deliveryEnabled: state.deliveryEnabled,
       travel: { ...state.travel },
       showRounded: state.showRounded,
     };
@@ -1170,10 +1344,18 @@
     const source = data || {};
     const savedSections = Array.isArray(source.sections) ? source.sections : [];
 
+    const fallbackSwell = source.swell || { enabled: false, percent: "5" };
+    state.removalsEnabled = source.removalsEnabled !== false;
     state.sections = savedSections.length > 0
       ? savedSections.map((saved) => {
         const fields = { ...(saved || {}) };
         delete fields.id;
+        if (fields.swellEnabled === undefined) {
+          fields.swellEnabled = Boolean(fallbackSwell.enabled);
+        }
+        if (fields.swellPercent === undefined) {
+          fields.swellPercent = fallbackSwell.percent ?? "5";
+        }
         return createSection(fields);
       })
       : [createSection()];
@@ -1183,21 +1365,35 @@
       ...(source.truck || {}),
       capacityMode: "volume",
     };
-    state.swell = {
-      enabled: false,
-      percent: "30",
-      ...(source.swell || {}),
-    };
     state.gst = {
       mode: "none",
       rate: "10",
       ...(source.gst || {}),
     };
-    state.delivery = {
-      ...createDelivery(),
-      ...(source.delivery || {}),
-    };
-    delete state.delivery.density;
+    if (Array.isArray(source.deliveries)) {
+      state.deliveries = source.deliveries.map((saved) => {
+        const fields = { ...(saved || {}) };
+        delete fields.id;
+        delete fields.enabled;
+        delete fields.density;
+        return createDeliveryItem(fields);
+      });
+      state.deliveryEnabled = source.deliveryEnabled !== false;
+    } else if (source.delivery) {
+      const fields = { ...source.delivery };
+      delete fields.id;
+      delete fields.enabled;
+      delete fields.density;
+      state.deliveries = [createDeliveryItem(fields)];
+      state.deliveryEnabled = source.delivery.enabled === true;
+    } else {
+      state.deliveries = [createDeliveryItem()];
+      state.deliveryEnabled = false;
+    }
+
+    if (state.deliveries.length === 0) {
+      state.deliveries = [createDeliveryItem()];
+    }
     state.travel = {
       ...createTravel(),
       ...(source.travel || {}),
@@ -1438,31 +1634,129 @@
     }
   }
 
-  function syncDeliveryControls() {
-    deliveryEnabledInput.checked = state.delivery.enabled;
-    deliveryCard.hidden = !state.delivery.enabled;
+  function syncRemovalsControls() {
+    removalsEnabledInput.checked = state.removalsEnabled;
+    removalsCard.hidden = !state.removalsEnabled;
+  }
 
-    for (const element of deliveryCard.querySelectorAll("[data-delivery-field]")) {
+  function syncDeliveryItem(card, item) {
+    for (const element of card.querySelectorAll("[data-delivery-field]")) {
       const field = element.dataset.deliveryField;
       if (element.type === "checkbox") {
-        element.checked = Boolean(state.delivery[field]);
+        element.checked = Boolean(item[field]);
       } else {
-        element.value = state.delivery[field] ?? "";
+        element.value = item[field] ?? "";
       }
     }
 
-    const basis = state.delivery.amountBasis;
+    applyDeliveryLayout(card, item);
+  }
+
+  function applyDeliveryLayout(card, item) {
+    const basis = item.amountBasis;
     const isWeight = basis === "weight";
     const isArea = basis === "area";
 
-    deliveryAmountFields.hidden = isArea;
-    deliveryAreaFields.hidden = !isArea;
-    deliverySettlingFields.hidden = isWeight;
-    deliverySettlingPercentField.hidden = isWeight;
-    deliveryAddSettlingField.hidden = basis !== "volume";
-    deliveryAmountUnit.textContent = isWeight ? "t" : "m³";
-    deliveryPriceUnit.textContent = isWeight ? "/ t" : "/ m³";
-    deliveryCustomFeeField.hidden = state.delivery.deliveryMode !== "custom";
+    card.querySelector("[data-delivery-amount-fields]").hidden = isArea;
+    card.querySelector("[data-delivery-area-fields]").hidden = !isArea;
+    card.querySelector("[data-delivery-settling-fields]").hidden = isWeight;
+    card.querySelector("[data-delivery-settling-percent-field]").hidden = isWeight;
+    card.querySelector("[data-delivery-add-settling-field]").hidden = basis !== "volume";
+    card.querySelector('[data-role="amount-unit"]').textContent = isWeight ? "t" : "m³";
+    card.querySelector('[data-role="price-unit"]').textContent = isWeight ? "/ t" : "/ m³";
+    card.querySelector("[data-delivery-custom-fee-field]").hidden = item.deliveryMode !== "custom";
+  }
+
+  function renderDeliveries() {
+    deliveriesContainer.innerHTML = "";
+
+    deliveryCountEl.textContent = `${state.deliveries.length} material${state.deliveries.length === 1 ? "" : "s"}`;
+
+    state.deliveries.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "delivery-item";
+      card.dataset.deliveryId = item.id;
+      card.innerHTML = deliveryItemMarkup();
+      deliveriesContainer.appendChild(card);
+
+      const remove = card.querySelector('[data-action="remove-delivery"]');
+      if (remove) {
+        remove.disabled = state.deliveries.length <= 1;
+      }
+
+      syncDeliveryItem(card, item);
+    });
+  }
+
+  function syncDeliveryControls() {
+    deliveryEnabledInput.checked = state.deliveryEnabled;
+    deliveryCard.hidden = !state.deliveryEnabled;
+    renderDeliveries();
+  }
+
+  function handleDeliveryInput(event) {
+    const card = event.target.closest(".delivery-item");
+    const field = event.target.dataset.deliveryField;
+
+    if (!card || !field) {
+      return;
+    }
+
+    const item = state.deliveries.find((entry) => entry.id === card.dataset.deliveryId);
+    if (!item) {
+      return;
+    }
+
+    item[field] = event.target.type === "checkbox"
+      ? event.target.checked
+      : event.target.value;
+
+    if (field === "amountBasis" || field === "deliveryMode") {
+      applyDeliveryLayout(card, item);
+    }
+
+    update();
+  }
+
+  function handleDeliveryAction(event) {
+    const duplicate = event.target.closest('[data-action="duplicate-delivery"]');
+    if (duplicate) {
+      const card = duplicate.closest(".delivery-item");
+      if (!card) {
+        return;
+      }
+
+      const index = state.deliveries.findIndex(
+        (item) => item.id === card.dataset.deliveryId
+      );
+      if (index === -1) {
+        return;
+      }
+
+      const original = state.deliveries[index];
+      state.deliveries.splice(index + 1, 0, {
+        ...original,
+        id: createDeliveryId(),
+        materialName: original.materialName ? `${original.materialName} copy` : "",
+      });
+      renderDeliveries();
+      update();
+      return;
+    }
+
+    const button = event.target.closest('[data-action="remove-delivery"]');
+    if (!button) {
+      return;
+    }
+
+    const card = button.closest(".delivery-item");
+    if (!card || state.deliveries.length <= 1) {
+      return;
+    }
+
+    state.deliveries = state.deliveries.filter((item) => item.id !== card.dataset.deliveryId);
+    renderDeliveries();
+    update();
   }
 
   function syncTravelControls() {
@@ -1491,30 +1785,12 @@
     truckWeightInput.value = state.truck.weightCapacity;
     truckPriceInput.value = state.truck.pricePerTruck;
     truckFuelInput.value = state.truck.fuelConsumption;
-    swellEnabledInput.checked = state.swell.enabled;
-    swellPercentInput.value = state.swell.percent;
     roundUpInput.checked = state.showRounded;
     gstModeInput.value = state.gst.mode;
     gstRateInput.value = state.gst.rate;
+    syncRemovalsControls();
     syncDeliveryControls();
     syncTravelControls();
-  }
-
-  function handleDeliveryInput(event) {
-    const field = event.target.dataset.deliveryField;
-    if (!field) {
-      return;
-    }
-
-    state.delivery[field] = event.target.type === "checkbox"
-      ? event.target.checked
-      : event.target.value;
-
-    if (field === "amountBasis" || field === "deliveryMode") {
-      syncDeliveryControls();
-    }
-
-    update();
   }
 
   function handleTravelInput(event) {
@@ -1647,16 +1923,6 @@
     update();
   });
 
-  swellEnabledInput.addEventListener("change", () => {
-    state.swell.enabled = swellEnabledInput.checked;
-    update();
-  });
-
-  swellPercentInput.addEventListener("input", () => {
-    state.swell.percent = swellPercentInput.value;
-    update();
-  });
-
   roundUpInput.addEventListener("change", () => {
     state.showRounded = roundUpInput.checked;
     update();
@@ -1672,14 +1938,35 @@
     update();
   });
 
+  removalsEnabledInput.addEventListener("change", () => {
+    state.removalsEnabled = removalsEnabledInput.checked;
+    syncRemovalsControls();
+    update();
+  });
+
   deliveryEnabledInput.addEventListener("change", () => {
-    state.delivery.enabled = deliveryEnabledInput.checked;
+    state.deliveryEnabled = deliveryEnabledInput.checked;
     syncDeliveryControls();
     update();
   });
 
-  deliveryCard.addEventListener("input", handleDeliveryInput);
-  deliveryCard.addEventListener("change", handleDeliveryInput);
+  deliveriesContainer.addEventListener("input", handleDeliveryInput);
+  deliveriesContainer.addEventListener("change", handleDeliveryInput);
+  deliveriesContainer.addEventListener("click", handleDeliveryAction);
+
+  addDeliveryButton.addEventListener("click", () => {
+    state.deliveries.push(createDeliveryItem());
+    syncDeliveryControls();
+    update();
+    const last = deliveriesContainer.lastElementChild;
+    if (last) {
+      last.scrollIntoView({ behavior: "smooth", block: "center" });
+      const nameInput = last.querySelector('[data-delivery-field="materialName"]');
+      if (nameInput) {
+        nameInput.focus();
+      }
+    }
+  });
 
   travelEnabledInput.addEventListener("change", () => {
     state.travel.enabled = travelEnabledInput.checked;
@@ -1803,11 +2090,14 @@
     if (!window.confirm("Start a new job? Unsaved changes will be lost.")) {
       return;
     }
+    state.removalsEnabled = true;
     state.sections = [createSection()];
-    state.delivery = createDelivery();
+    state.deliveries = [createDeliveryItem()];
+    state.deliveryEnabled = false;
     state.travel = createTravel();
     currentJobId = null;
     jobNameInput.value = "";
+    syncRemovalsControls();
     syncDeliveryControls();
     syncTravelControls();
     renderSections();

@@ -496,6 +496,36 @@
         },
       },
       {
+        name: "applies swell per section",
+        run() {
+          const job = sampleJob();
+          job.swell = { enabled: false, percent: 5 };
+          job.sections[0].swellEnabled = true;
+          job.sections[0].swellPercent = 20;
+          job.sections[1].swellEnabled = false;
+          job.sections[1].swellPercent = 30;
+          const result = Calc.calculateJob(job);
+          closeTo(result.sections[0].looseVolume, 3.6, "first loose volume");
+          closeTo(result.sections[1].looseVolume, 5, "second loose volume");
+          closeTo(result.totals.volumeLoose, 8.6, "total loose volume");
+        },
+      },
+      {
+        name: "can calculate a material-only job with removals disabled",
+        run() {
+          const job = sampleJob();
+          job.removalsEnabled = false;
+          job.delivery = sampleDelivery();
+          const result = Calc.calculateJob(job);
+          equal(result.sections.length, 0, "sections");
+          closeTo(result.totals.volumeInGround, 0, "volume in ground");
+          closeTo(result.totals.trucks.exact, 0, "spoil trucks");
+          closeTo(result.totals.delivery.total.rounded, 2050, "delivery total");
+          closeTo(result.totals.combined.price.rounded, 2050, "combined price");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
         name: "combines uneven ends and rectangle sections",
         run() {
           const job = sampleJob();
@@ -807,6 +837,37 @@
           equal(high.trucks.rounded, 2, "high truck count");
           closeTo(low.tripCost.rounded, 150, "low trip cost");
           closeTo(high.tripCost.rounded, 300, "high trip cost");
+        },
+      },
+      {
+        name: "combines multiple material deliveries",
+        run() {
+          const result = Calc.calculateJob({
+            sections: [],
+            truck: { capacityMode: "volume", volumeCapacity: 6.5, weightCapacity: 8 },
+            pricePerTruck: 800,
+            gst: { mode: "none", rate: 0 },
+            deliveries: [
+              sampleDelivery({
+                amount: 4,
+                price: 79,
+                deliveryMode: "custom",
+                customFee: 150,
+              }),
+              sampleDelivery({
+                amountBasis: "weight",
+                amount: 2,
+                price: 80,
+                deliveryMode: "custom",
+                customFee: 200,
+              }),
+            ],
+          });
+          equal(result.totals.delivery.items.length, 2, "delivery items");
+          closeTo(result.totals.delivery.materialCost, 476, "material cost");
+          closeTo(result.totals.delivery.total.exact, 618.3076923076923, "exact total");
+          closeTo(result.totals.delivery.total.rounded, 826, "rounded total");
+          equal(result.totals.delivery.trucks.rounded, 2, "rounded trucks");
         },
       },
       {

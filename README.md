@@ -31,13 +31,15 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 
 ## Working now
 
-- Rectangle, uneven ends, manual area and manual volume sections
+- Removals with rectangle, uneven ends, manual area and manual volume sections
+- Removals can be disabled for material-only jobs
+- Per-section swell, off by default with a 5% default
 - Area, volume and formula shown for each section
 - Volume-based spoil truck loads
 - Weight-based material delivery capacity
 - Truck presets with volume, weight, fuel consumption and price
 - Local truck preset save, load and delete
-- Material In with direct volume, direct weight or area × depth
+- Multiple material entries with direct volume, direct weight or area × depth
 - Material cost, delivery pricing and combined spoil and delivery totals
 - Swell, price rounding and GST
 - Travel and fuel with round trips, truck fuel consumption, price per km and diesel price
@@ -50,7 +52,7 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 ## Still planned
 
 - Material presets with default prices, swell and settling values
-- Uneven fill areas and multiple material entries
+- Uneven fill areas
 - Offline native apps for Windows, Linux and Android
 - Shared job list for Docker users on the same LAN
 - Shared truck presets for Docker users on the same LAN

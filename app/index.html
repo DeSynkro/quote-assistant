@@ -104,65 +104,28 @@
       </div>
 
       <div class="card">
-        <div class="card-head">
-          <h2>Job sections</h2>
-          <span class="pill" id="section-count">1 section</span>
+        <div class="switch-row" style="border-bottom:none;padding-top:0">
+          <div>
+            <div class="label">Removing material?</div>
+            <div class="hint">Adds removal sections and spoil trucks.</div>
+          </div>
+          <input id="removals-enabled" type="checkbox" class="switch" checked aria-label="Removing material">
         </div>
-        <div id="sections"></div>
-        <button class="add-btn" id="add-section" type="button">+ Add section</button>
       </div>
 
-      <div class="card">
-        <h2>Assumptions</h2>
-
-        <div class="switch-row">
-          <div>
-            <div class="label">Apply swell (material expansion)</div>
-            <div class="hint">Digging loosens material, so it takes more truck space.</div>
-          </div>
-          <div class="inline-fields">
-            <input id="swell-enabled" type="checkbox" class="switch" aria-label="Apply swell">
-            <input id="swell-percent" type="number" inputmode="decimal" step="any" value="30" aria-label="Swell percent">
-            <span class="muted small">%</span>
-          </div>
+      <div class="card" id="removals-card">
+        <div class="card-head">
+          <h2>Removals</h2>
+          <span class="pill" id="section-count">1 removal</span>
         </div>
-
-        <div class="switch-row">
-          <div>
-            <div class="label">Round up trucks and prices</div>
-            <div class="hint">Shows the exact decimal and the rounded totals.</div>
-          </div>
-          <input id="round-up" type="checkbox" class="switch" checked aria-label="Round up trucks and prices">
-        </div>
-
-        <div class="switch-row">
-          <div>
-            <div class="label">GST</div>
-            <div class="hint">No GST by default.</div>
-          </div>
-          <select id="gst-mode" aria-label="GST mode">
-            <option value="none">No GST</option>
-            <option value="add">Add GST</option>
-            <option value="included">GST included</option>
-          </select>
-        </div>
-
-        <div class="switch-row">
-          <div>
-            <div class="label">GST rate</div>
-            <div class="hint">Used when GST is added or included.</div>
-          </div>
-          <div class="inline-fields">
-            <input id="gst-rate" type="number" inputmode="decimal" step="any" value="10" aria-label="GST rate">
-            <span class="muted small">%</span>
-          </div>
-        </div>
+        <div id="sections"></div>
+        <button class="add-btn" id="add-section" type="button">+ Add removal</button>
       </div>
 
       <div class="card">
         <div class="switch-row" style="border-bottom:none;padding-top:0">
           <div>
-            <div class="label">Bringing material to site?</div>
+            <div class="label">Bringing materials to site?</div>
             <div class="hint">Adds material cost and delivery trucks.</div>
           </div>
           <input id="delivery-enabled" type="checkbox" class="switch" aria-label="Bringing material to site">
@@ -170,102 +133,12 @@
       </div>
 
       <div class="card" id="delivery-card" hidden>
-        <h2>Material in</h2>
-
-        <div class="fields">
-          <label class="field">
-            <span>Material name</span>
-            <input id="delivery-name" data-delivery-field="materialName" type="text" placeholder="Gravel, topsoil, fill">
-          </label>
-          <label class="field">
-            <span>Amount method</span>
-            <select id="delivery-basis" data-delivery-field="amountBasis">
-              <option value="volume">Direct volume</option>
-              <option value="weight">Direct weight</option>
-              <option value="area">Area × depth</option>
-            </select>
-          </label>
+        <div class="card-head">
+          <h2>Materials In</h2>
+          <span class="pill" id="delivery-count">1 material</span>
         </div>
-
-        <div class="fields one" id="delivery-amount-fields">
-          <label class="field">
-            <span>Amount to deliver</span>
-            <span class="with-unit">
-              <input id="delivery-amount" data-delivery-field="amount" type="number" inputmode="decimal" step="any" placeholder="0">
-              <span class="unit" id="delivery-amount-unit">m³</span>
-            </span>
-          </label>
-        </div>
-
-        <div class="fields three" id="delivery-area-fields" hidden>
-          <label class="field">
-            <span>Width</span>
-            <span class="with-unit">
-              <input id="delivery-width" data-delivery-field="width" type="number" inputmode="decimal" step="any" placeholder="0">
-              <select id="delivery-width-unit" data-delivery-field="widthUnit" aria-label="Delivery width unit"><option>m</option><option>cm</option><option>mm</option></select>
-            </span>
-          </label>
-          <label class="field">
-            <span>Length</span>
-            <span class="with-unit">
-              <input id="delivery-length" data-delivery-field="length" type="number" inputmode="decimal" step="any" placeholder="0">
-              <select id="delivery-length-unit" data-delivery-field="lengthUnit" aria-label="Delivery length unit"><option>m</option><option>cm</option><option>mm</option></select>
-            </span>
-          </label>
-          <label class="field">
-            <span>Depth</span>
-            <span class="with-unit">
-              <input id="delivery-depth" data-delivery-field="depth" type="number" inputmode="decimal" step="any" placeholder="0">
-              <select id="delivery-depth-unit" data-delivery-field="depthUnit" aria-label="Delivery depth unit"><option>mm</option><option>cm</option><option>m</option></select>
-            </span>
-          </label>
-        </div>
-
-        <div class="fields" id="delivery-settling-fields">
-          <label class="field" id="delivery-settling-percent-field">
-            <span>Settling allowance</span>
-            <span class="with-unit">
-              <input id="delivery-settling" data-delivery-field="settlingPercent" type="number" inputmode="decimal" step="any" value="10">
-              <span class="unit">%</span>
-            </span>
-          </label>
-          <label class="field" id="delivery-add-settling-field">
-            <span>Apply to direct volume</span>
-            <span class="check-row">
-              <input id="delivery-add-settling" data-delivery-field="addSettling" type="checkbox">
-              <span>Yes</span>
-            </span>
-          </label>
-        </div>
-
-        <div class="fields one">
-          <label class="field">
-            <span>Material price</span>
-            <span class="with-unit">
-              <input id="delivery-price" data-delivery-field="price" type="number" inputmode="decimal" step="any" placeholder="0">
-              <span class="unit" id="delivery-price-unit">/ m³</span>
-            </span>
-          </label>
-        </div>
-
-        <div class="fields">
-          <label class="field">
-            <span>Delivery pricing</span>
-            <select id="delivery-mode" data-delivery-field="deliveryMode">
-              <option value="custom">Custom fee per truck</option>
-              <option value="truckRate">Use main truck rate</option>
-              <option value="included">Included in material price</option>
-            </select>
-          </label>
-          <label class="field" id="delivery-custom-fee-field" hidden>
-            <span>Custom fee per truck</span>
-            <span class="with-unit">
-              <input id="delivery-custom-fee" data-delivery-field="customFee" type="number" inputmode="decimal" step="any" placeholder="0">
-              <span class="unit">$</span>
-            </span>
-          </label>
-        </div>
-
+        <div id="deliveries"></div>
+        <button class="add-btn" id="add-delivery" type="button">+ Add material</button>
         <div class="footnote">Area × depth uses a rectangle. Use direct volume for irregular fill areas.</div>
         <div class="footnote">Delivery checks the capacity that matches the material amount and uses the same truck capacities. Spoil and delivery trips are calculated separately. A custom fee is charged for each delivery truck.</div>
       </div>
@@ -389,7 +262,7 @@
     <aside class="results" aria-label="Estimate" aria-live="polite">
       <h2>Estimate</h2>
 
-      <div class="result-row">
+      <div class="result-row" id="result-volume-row">
         <div class="result-label">Spoil to remove</div>
         <div class="result-value" id="result-volume">0 m³</div>
         <div class="result-sub" id="result-volume-sub">0 m³ loose</div>
@@ -423,6 +296,23 @@
         <div class="result-label">Estimated charge</div>
         <div class="result-value money" id="result-price">$0</div>
         <div class="result-sub" id="result-price-sub"></div>
+      </div>
+
+      <div class="price-options">
+        <label class="check-row">
+          <input id="round-up" type="checkbox" checked>
+          <span>Round up trucks and prices</span>
+        </label>
+        <div class="price-option-row">
+          <span class="muted small">GST</span>
+          <select id="gst-mode" aria-label="GST mode">
+            <option value="none">No GST</option>
+            <option value="add">Add GST</option>
+            <option value="included">GST included</option>
+          </select>
+          <input id="gst-rate" type="number" inputmode="decimal" step="any" value="10" aria-label="GST rate">
+          <span class="muted small">%</span>
+        </div>
       </div>
 
       <div class="summary" id="summary">Add job dimensions to see an estimate.</div>

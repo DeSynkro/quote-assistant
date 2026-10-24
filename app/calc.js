@@ -406,6 +406,46 @@
     };
   }
 
+  function aggregateDeliveries(results) {
+    const items = (Array.isArray(results) ? results : []).filter(Boolean);
+    if (items.length === 0) {
+      return null;
+    }
+
+    const sum = (values) => values.reduce((total, value) => total + value, 0);
+    const allVolumesKnown = items.every((item) => item.deliveredVolume !== null);
+    const allWeightsKnown = items.every((item) => item.weight !== null);
+
+    return {
+      enabled: true,
+      items,
+      materialName: items.map((item) => item.materialName).filter(Boolean).join(", "),
+      deliveredVolume: allVolumesKnown
+        ? sum(items.map((item) => item.deliveredVolume))
+        : null,
+      weight: allWeightsKnown
+        ? sum(items.map((item) => item.weight))
+        : null,
+      materialCost: sum(items.map((item) => item.materialCost)),
+      trucks: {
+        exact: sum(items.map((item) => item.trucks.exact)),
+        rounded: sum(items.map((item) => item.trucks.rounded)),
+        limit: items.length === 1 ? items[0].trucks.limit : null,
+        byVolume: items.length === 1 ? items[0].trucks.byVolume : null,
+        byWeight: items.length === 1 ? items[0].trucks.byWeight : null,
+      },
+      tripCost: {
+        exact: sum(items.map((item) => item.tripCost.exact)),
+        rounded: sum(items.map((item) => item.tripCost.rounded)),
+      },
+      total: {
+        exact: sum(items.map((item) => item.total.exact)),
+        rounded: sum(items.map((item) => item.total.rounded)),
+      },
+      warnings: items.flatMap((item) => item.warnings),
+    };
+  }
+
   function sectionName(section, index) {
     const name = section && section.name ? String(section.name).trim() : "";
     return name || `Section ${index + 1}`;
@@ -413,9 +453,12 @@
 
   function calculateJob(job) {
     const source = job || {};
-    const sections = Array.isArray(source.sections) ? source.sections : [];
+    const removalsEnabled = source.removalsEnabled !== false;
+    const sections = removalsEnabled && Array.isArray(source.sections)
+      ? source.sections
+      : [];
     const truck = source.truck || {};
-    const swell = source.swell || { enabled: false, percent: 0 };
+    const fallbackSwell = source.swell || { enabled: false, percent: 5 };
     const gst = source.gst || { mode: "none", rate: 0 };
     const warnings = [];
     const results = [];
@@ -424,10 +467,10 @@
     let totalWeight = 0;
     let weightKnown = sections.length > 0;
 
-    if (sections.length === 0) {
+    if (removalsEnabled && sections.length === 0) {
       warnings.push({
         code: "no-sections",
-        message: "Add at least one section.",
+        message: "Add at least one removal.",
       });
     }
 
@@ -435,11 +478,13 @@
       const section = sections[index] || {};
       const name = sectionName(section, index);
       const volume = sectionVolume(section);
-      const looseVolume = applySwell(
-        volume.volume,
-        swell.enabled,
-        swell.percent
-      );
+      const swellEnabled = section.swellEnabled !== undefined
+        ? section.swellEnabled
+        : fallbackSwell.enabled;
+      const swellPercent = section.swellPercent !== undefined
+        ? section.swellPercent
+        : fallbackSwell.percent;
+      const looseVolume = applySwell(volume.volume, swellEnabled, swellPercent);
       const density = positiveNumber(
         section.material && section.material.looseDensity
       );
@@ -523,9 +568,14 @@
     const price = calculatePrice(loads.exact, source.pricePerTruck);
     const gstExact = applyGst(price.exact, gst.mode, gst.rate);
     const gstRounded = applyGst(price.rounded, gst.mode, gst.rate);
-    const delivery = source.delivery && source.delivery.enabled
-      ? calculateDelivery(source.delivery, truck, source.pricePerTruck)
-      : null;
+    const deliverySources = Array.isArray(source.deliveries)
+      ? source.deliveries
+      : source.delivery && source.delivery.enabled
+        ? [source.delivery]
+        : [];
+    const delivery = aggregateDeliveries(
+      deliverySources.map((item) => calculateDelivery(item, truck, source.pricePerTruck))
+    );
 
     if (delivery) {
       warnings.push(...delivery.warnings);
