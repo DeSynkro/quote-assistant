@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quote Assistant - UI mockup</title>
+<style>
+  :root {
+    --bg: #15161a;
+    --panel: #212329;
+    --panel-2: #2a2d34;
+    --line: #3a3e47;
+    --text: #e9ebef;
+    --muted: #9aa1ab;
+    --accent: #6ee7a8;
+    --accent-soft: rgba(110, 231, 168, .12);
+    --blue: #7ab8ff;
+    --warn: #f2b84b;
+    --danger: #ff8f8f;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(900px 500px at 15% -10%, #233028 0%, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+    min-height: 100vh;
+  }
+
+  .banner {
+    background: #1b1d22;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12.5px;
+    padding: 8px 20px;
+    text-align: center;
+  }
+
+  .app {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 26px 20px 64px;
+  }
+
+  header.top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: .4px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin-top: 4px;
+  }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+  .btn {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 14px;
+    font: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+  }
+
+  .btn:hover { border-color: #4b505b; }
+  .btn.primary { background: var(--accent); color: #10231a; border-color: var(--accent); font-weight: 650; }
+  .btn.small { padding: 6px 10px; font-size: 12px; }
+
+  .jobbar { padding: 14px 18px; }
+  .jobbar-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .jobbar-row .field { flex: 1 1 320px; }
+  .jobbar-actions { display: flex; gap: 8px; }
+  .jobbar-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 9, 11, .72);
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    z-index: 50;
+  }
+
+  .overlay[hidden] { display: none; }
+
+  .dialog {
+    width: min(560px, 100%);
+    max-height: 82vh;
+    overflow: auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  }
+
+  .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  .dialog-head h2 { margin: 0; font-size: 17px; letter-spacing: .2px; }
+
+  .job-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(58, 62, 71, .55);
+  }
+
+  .job-item:last-child { border-bottom: none; }
+  .job-item-name { font-size: 14.5px; font-weight: 600; }
+  .job-item-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .job-item-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    background: #232a26;
+    border: 1px solid rgba(110, 231, 168, .4);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    z-index: 60;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+  }
+
+  .toast[hidden] { display: none; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--muted);
+    border-radius: 999px;
+    font-size: 11.5px;
+    letter-spacing: .4px;
+    padding: 5px 10px;
+    white-space: nowrap;
+  }
+
+  .pill.green { color: var(--accent); border-color: rgba(110, 231, 168, .35); background: var(--accent-soft); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+
+  .card h2 {
+    font-size: 12px;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .card-head h2 { margin: 0; }
+
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .field > span { font-size: 12px; color: var(--muted); }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 10px 11px;
+    font: inherit;
+    font-size: 14.5px;
+    min-height: 42px;
+  }
+
+  input:focus, select:focus {
+    outline: 2px solid rgba(122, 184, 255, .5);
+    outline-offset: 1px;
+    border-color: var(--blue);
+  }
+
+  input[disabled] {
+    opacity: .45;
+  }
+
+  .with-unit { display: flex; gap: 6px; }
+  .with-unit input { flex: 1 1 auto; min-width: 0; }
+  .with-unit select { flex: 0 0 76px; width: 76px; }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .section-card {
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255,255,255,.015), transparent);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .section-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .section-top input {
+    background: transparent;
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 6px 8px;
+    min-height: 34px;
+  }
+
+  .section-top input:hover { border-color: var(--line); }
+
+  .section-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  .icon-btn {
+    background: var(--panel-2);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 9px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .icon-btn:hover { color: var(--text); border-color: #4b505b; }
+
+  .section-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .section-extra {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(110, 231, 168, .3);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .chip.blue { color: var(--blue); background: rgba(122,184,255,.1); border-color: rgba(122,184,255,.3); }
+  .chip.warn { color: var(--warn); background: rgba(242,184,75,.1); border-color: rgba(242,184,75,.3); }
+
+  .add-btn {
+    width: 100%;
+    background: transparent;
+    border: 1.5px dashed #4a4f5a;
+    color: var(--muted);
+    border-radius: 12px;
+    padding: 12px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+
+  .add-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(58, 62, 71, .55);
+  }
+
+  .switch-row:last-child { border-bottom: none; }
+
+  .switch-row .label { font-size: 14px; }
+  .switch-row .hint { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  .switch {
+    appearance: none;
+    width: 44px;
+    height: 25px;
+    background: #3a3e47;
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background .15s ease;
+  }
+
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 19px;
+    height: 19px;
+    background: #cfd3da;
+    border-radius: 50%;
+    transition: transform .15s ease;
+  }
+
+  .switch:checked { background: var(--accent); }
+  .switch:checked::after { transform: translateX(19px); background: #10231a; }
+
+  .inline-fields {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .inline-fields input { width: 90px; }
+
+  .segmented {
+    display: inline-flex;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .segmented button {
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .segmented button.active {
+    background: var(--text);
+    color: #15161a;
+    font-weight: 600;
+  }
+
+  .results {
+    position: sticky;
+    top: 16px;
+    background: linear-gradient(180deg, #232a26, #1d2024);
+    border: 1px solid rgba(110, 231, 168, .22);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+
+  .results h2 {
+    font-size: 12px;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+
+  .result-row {
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(58, 62, 71, .55);
+  }
+
+  .result-row:last-of-type { border-bottom: none; }
+
+  .result-label { font-size: 12.5px; color: var(--muted); margin-bottom: 3px; }
+  .result-value { font-size: 18px; font-weight: 650; letter-spacing: .2px; }
+  .result-value .money { color: var(--accent); }
+  .result-value .sub { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+  .rounded-inline { display: none; color: var(--warn); font-size: 13px; font-weight: 500; }
+  body.roundup .rounded-inline { display: inline; }
+
+  .total-row {
+    margin-top: 10px;
+    padding: 14px;
+    background: rgba(110, 231, 168, .08);
+    border: 1px solid rgba(110, 231, 168, .28);
+    border-radius: 12px;
+  }
+
+  .total-row .result-label { color: var(--accent); }
+  .total-row .result-value { font-size: 21px; }
+
+  .summary {
+    margin-top: 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 12px;
+    font-size: 13px;
+    color: #d7dbe2;
+  }
+
+  .summary strong { color: var(--text); }
+
+  details {
+    margin-top: 12px;
+    border-top: 1px solid rgba(58, 62, 71, .55);
+    padding-top: 10px;
+  }
+
+  summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12.5px;
+    user-select: none;
+  }
+
+  summary:hover { color: var(--text); }
+
+  .maths {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: grid;
+    gap: 5px;
+  }
+
+  .maths code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #cfd6e0;
+    font-size: 12px;
+  }
+
+  .notice {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-top: 12px;
+    font-size: 11.5px;
+    color: var(--muted);
+    border-top: 1px solid rgba(58, 62, 71, .55);
+    padding-top: 10px;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--warn);
+    flex: 0 0 auto;
+    margin-top: 5px;
+  }
+
+  .delivery-card { display: none; }
+  body.bringing .delivery-card { display: block; }
+  body.bringing .delivery-result { display: block; }
+  .delivery-result { display: none; }
+
+  #travelfields { display: block; }
+  body.notravel #travelfields,
+  body.notravel .fuel-result { display: none; }
+
+  .divider { height: 1px; background: rgba(58,62,71,.55); margin: 6px 0; }
+
+  .footnote {
+    color: var(--muted);
+    font-size: 11.5px;
+    margin-top: 14px;
+  }
+
+  @media (max-width: 920px) {
+    .layout { grid-template-columns: 1fr; }
+    .results { position: static; }
+    header.top { flex-direction: column; }
+    .badges { justify-content: flex-start; }
+  }
+
+  @media (max-width: 560px) {
+    .app { padding: 18px 12px 48px; }
+    h1 { font-size: 24px; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .section-extra { grid-template-columns: 1fr; }
+    .with-unit select { flex-basis: 70px; width: 70px; }
+  }
+</style>
+</head>
+<body class="roundup">
+
+<div class="banner">Design mockup only - not the real app. This shows the native, offline mode. Docker mode uses the same layout with a shared job list. No fonts or scripts are loaded from the internet. Example figures assume 30% swell.</div>
+
+<main class="app">
+
+  <header class="top">
+    <div>
+      <h1>Quote Assistant</h1>
+      <div class="subtitle">On-the-spot earthmoving estimator - internal use only</div>
+    </div>
+    <div class="badges">
+      <span class="pill green">Offline · local only</span>
+      <span class="pill">Settings</span>
+    </div>
+  </header>
+
+  <div class="card jobbar">
+    <div class="jobbar-row">
+      <label class="field">
+        <span>Job name or address (optional)</span>
+        <input type="text" id="jobname" value="Front yard - 12 Smith St" placeholder="Leave blank to save with the date and time">
+      </label>
+      <div class="jobbar-actions">
+        <button class="btn" type="button" id="newjob">New</button>
+        <button class="btn primary" type="button" id="savejob">Save</button>
+        <button class="btn" type="button" id="loadjobs">Load</button>
+      </div>
+    </div>
+    <div class="jobbar-meta">
+      <span class="pill green">Saved locally · 24 Oct, 10:46</span>
+      <span class="small muted">Saved jobs never leave this device.</span>
+    </div>
+  </div>
+
+  <div class="layout">
+    <section>
+
+      <div class="card">
+        <h2>Truck</h2>
+        <div class="segmented" role="group" aria-label="Truck capacity input type">
+          <button type="button">Volume</button>
+          <button type="button">Weight</button>
+          <button type="button" class="active">Both</button>
+        </div>
+
+        <div class="grid-3" style="margin-top:14px">
+          <label class="field">
+            <span>Volume capacity</span>
+            <div class="with-unit">
+              <input type="number" value="6.5">
+              <select aria-label="Volume unit"><option>m³</option></select>
+            </div>
+          </label>
+          <label class="field">
+            <span>Weight capacity</span>
+            <div class="with-unit">
+              <input type="number" value="8">
+              <select aria-label="Weight unit"><option>t</option><option>kg</option></select>
+            </div>
+          </label>
+          <label class="field">
+            <span>Price per truck</span>
+            <div class="with-unit">
+              <input type="number" value="800">
+              <select aria-label="Currency"><option>$</option></select>
+            </div>
+          </label>
+        </div>
+        <div class="footnote">Both limits are checked. In volume-only mode the weight limit is ignored.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Job sections</h2>
+          <span class="pill">2 sections</span>
+        </div>
+
+        <div class="section-card">
+          <div class="section-top">
+            <input type="text" value="Front yard" aria-label="Section name">
+            <div class="section-actions">
+              <button class="icon-btn" type="button">Duplicate</button>
+              <button class="icon-btn" type="button">Remove</button>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <label class="field">
+              <span>Width</span>
+              <div class="with-unit">
+                <input type="number" value="10">
+                <select aria-label="Width unit"><option>m</option><option>cm</option><option>mm</option></select>
+              </div>
+            </label>
+            <label class="field">
+              <span>Length</span>
+              <div class="with-unit">
+                <input type="number" value="3">
+                <select aria-label="Length unit"><option>m</option><option>cm</option><option>mm</option></select>
+              </div>
+            </label>
+            <label class="field">
+              <span>Depth</span>
+              <div class="with-unit">
+                <input type="number" value="100" aria-label="Depth">
+                <select aria-label="Depth unit"><option>mm</option><option>cm</option><option>m</option></select>
+              </div>
+            </label>
+          </div>
+
+          <div class="section-extra">
+            <label class="field">
+              <span>Material</span>
+              <select>
+                <option>Volume only - no weight</option>
+                <option>Topsoil</option>
+                <option>Sand</option>
+                <option>Gravel</option>
+                <option>Crushed rock</option>
+                <option>Clay</option>
+                <option>Concrete rubble</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Depth handling</span>
+              <select>
+                <option>Measured depth</option>
+                <option>Assumed depth (flagged)</option>
+                <option>Manual volume override</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="section-foot">
+            <span class="chip">3.0 m³ in ground</span>
+            <span class="small muted">10 × 3 × 0.1 m</span>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-top">
+            <input type="text" value="Driveway" aria-label="Section name">
+            <div class="section-actions">
+              <button class="icon-btn" type="button">Duplicate</button>
+              <button class="icon-btn" type="button">Remove</button>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <label class="field">
+              <span>Width</span>
+              <div class="with-unit">
+                <input type="number" value="5">
+                <select aria-label="Width unit"><option>m</option><option>cm</option><option>mm</option></select>
+              </div>
+            </label>
+            <label class="field">
+              <span>Length</span>
+              <div class="with-unit">
+                <input type="number" value="5">
+                <select aria-label="Length unit"><option>m</option><option>cm</option><option>mm</option></select>
+              </div>
+            </label>
+            <label class="field">
+              <span>Depth</span>
+              <div class="with-unit">
+                <input type="number" value="200" aria-label="Depth">
+                <select aria-label="Depth unit"><option>mm</option><option>cm</option><option>m</option></select>
+              </div>
+            </label>
+          </div>
+
+          <div class="section-extra">
+            <label class="field">
+              <span>Material</span>
+              <select>
+                <option>Volume only - no weight</option>
+                <option>Topsoil</option>
+                <option>Sand</option>
+                <option>Gravel</option>
+                <option>Crushed rock</option>
+                <option>Clay</option>
+                <option>Concrete rubble</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Depth handling</span>
+              <select>
+                <option>Measured depth</option>
+                <option>Assumed depth (flagged)</option>
+                <option>Manual volume override</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="section-foot">
+            <span class="chip">5.0 m³ in ground</span>
+            <span class="small muted">5 × 5 × 0.2 m</span>
+          </div>
+        </div>
+
+        <button class="add-btn" type="button">+ Add section</button>
+      </div>
+
+      <div class="card">
+        <h2>Assumptions</h2>
+
+        <div class="switch-row">
+          <div>
+            <div class="label">Apply swell (material expansion)</div>
+            <div class="hint">Digging loosens material, so it takes more truck space. 30% means 8 m³ in the ground becomes 10.4 m³ loose. Off by default - leave it off if the volume is already loose.</div>
+          </div>
+          <label class="inline-fields">
+            <input type="checkbox" class="switch" checked aria-label="Apply swell">
+            <input type="number" value="30" aria-label="Swell percent">
+            <span class="muted small">%</span>
+          </label>
+        </div>
+
+        <div class="switch-row">
+          <div>
+            <div class="label">Round up trucks</div>
+            <div class="hint">Shows the exact decimal and the rounded figure side by side.</div>
+          </div>
+          <input type="checkbox" class="switch" id="roundup" checked aria-label="Round up trucks">
+        </div>
+
+        <div class="switch-row">
+          <div>
+            <div class="label">GST</div>
+            <div class="hint">Internal estimate - GST off by default.</div>
+          </div>
+          <select style="width:170px">
+            <option>No GST</option>
+            <option>Add 10%</option>
+            <option>Prices include 10%</option>
+          </select>
+        </div>
+
+        <details style="border-top:1px solid rgba(58,62,71,.55);padding-top:10px;margin-top:4px">
+          <summary>Plain-English guide</summary>
+          <div class="maths">
+            <div><strong style="color:var(--text)">Swell</strong> - ground material expands when dug. Use roughly 20-30% for soil; rock and concrete can be more.</div>
+            <div><strong style="color:var(--text)">Settling</strong> - delivered material compacts after placement. Use 5-15% so you order enough loose material.</div>
+            <div><strong style="color:var(--text)">Volume only</strong> - ignores weight and density; just checks how much space the material takes.</div>
+            <div><strong style="color:var(--text)">Rounded trucks</strong> - you cannot hire part of a truck. The exact decimal stays visible so you can see the slack.</div>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="switch-row" style="border-bottom:none;padding-top:0">
+          <div>
+            <div class="label">Bringing material to site?</div>
+            <div class="hint">Adds a delivery calculation with its own trucks and cost.</div>
+          </div>
+          <input type="checkbox" class="switch" id="bringing" checked aria-label="Bringing material">
+        </div>
+      </div>
+
+      <div class="card delivery-card">
+        <h2>Material in</h2>
+
+        <div class="section-extra">
+          <label class="field">
+            <span>Material</span>
+            <select>
+              <option>Gravel</option>
+              <option>Topsoil</option>
+              <option>Sand</option>
+              <option>Crushed rock</option>
+              <option>Custom material…</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Price per unit</span>
+            <div class="with-unit">
+              <input type="number" value="45">
+              <select aria-label="Price unit"><option>per m³</option><option>per t</option></select>
+            </div>
+          </label>
+        </div>
+
+        <div class="section-extra">
+          <label class="field">
+            <span>Amount required</span>
+            <div class="with-unit">
+              <input type="number" value="10">
+              <select aria-label="Amount unit"><option>m³</option><option>t</option></select>
+            </div>
+          </label>
+          <label class="field">
+            <span>Settling allowance</span>
+            <div class="with-unit">
+              <input type="number" value="10">
+              <select aria-label="Settling unit"><option>%</option></select>
+            </div>
+          </label>
+        </div>
+        <div class="footnote">Settling: 10% means 10 m³ of finished fill needs about 11 m³ of loose material.</div>
+
+        <div class="section-foot">
+          <span class="chip blue">10.0 m³ supplied · ≈ 1.7 trucks</span>
+          <span class="small muted">Material $450 + delivery trips</span>
+        </div>
+
+        <div class="switch-row" style="margin-top:6px">
+          <div>
+            <div class="label">Custom delivery fee</div>
+            <div class="hint">Overrides the calculated delivery trips. Blank by default; material cost stays separate.</div>
+          </div>
+          <label class="inline-fields">
+            <input type="checkbox" class="switch" id="customfee" aria-label="Customise delivery fee">
+            <div class="with-unit" style="width:128px">
+              <input type="number" id="customfee-value" placeholder="-" aria-label="Custom delivery fee" disabled>
+              <select aria-label="Custom fee currency"><option>$</option></select>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="switch-row" style="border-bottom:none;padding-top:0">
+          <div>
+            <div class="label">Include travel &amp; fuel estimate?</div>
+            <div class="hint">Optional. Uses the current trip distance and diesel price, and adds it to the final estimate.</div>
+          </div>
+          <input type="checkbox" class="switch" id="traveltoggle" checked aria-label="Include travel and fuel estimate">
+        </div>
+
+        <div id="travelfields">
+          <div class="section-extra">
+            <label class="field">
+              <span>Distance from job (one way)</span>
+              <div class="with-unit">
+                <input type="number" value="18">
+                <select aria-label="Distance unit"><option>km</option></select>
+              </div>
+            </label>
+            <label class="field">
+              <span>Diesel price</span>
+              <div class="with-unit">
+                <input type="number" value="2.10" step="0.01">
+                <select aria-label="Diesel unit"><option>$/L</option></select>
+              </div>
+            </label>
+          </div>
+
+          <div class="section-extra">
+            <label class="field">
+              <span>Truck fuel use</span>
+              <div class="with-unit">
+                <input type="number" value="30">
+                <select aria-label="Fuel use unit"><option>L/100 km</option></select>
+              </div>
+            </label>
+            <label class="field">
+              <span>Round trips</span>
+              <div class="with-unit">
+                <input type="number" value="3.3" disabled>
+                <select aria-label="Trips unit"><option>trucks</option></select>
+              </div>
+            </label>
+          </div>
+
+          <div class="section-foot">
+            <span class="chip blue">≈ $75 fuel · 119 km total</span>
+            <span class="small muted">3.3 trucks × 36 km round trip × 30 L/100 km × $2.10</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <aside class="results" aria-label="Estimate">
+      <h2>Estimate</h2>
+
+      <div class="result-row">
+        <div class="result-label">Spoil to remove</div>
+        <div class="result-value">1.6 trucks <span class="rounded-inline">(2 rounded)</span> · <span class="money">$1,280</span> <span class="rounded-inline">($1,600)</span></div>
+      </div>
+
+      <div class="result-row delivery-result">
+        <div class="result-label">Material to bring in</div>
+        <div class="result-value">1.7 trucks <span class="rounded-inline">(2 rounded)</span> · <span class="money">$1,810</span> <span class="rounded-inline">($2,050)</span></div>
+      </div>
+
+      <div class="result-row fuel-result">
+        <div class="result-label">Fuel estimate</div>
+        <div class="result-value">≈ $75 <span class="rounded-inline">(≈ $90)</span> <span class="sub">119 km</span></div>
+      </div>
+
+      <div class="total-row">
+        <div class="result-label">There and back</div>
+        <div class="result-value">3.3 trucks <span class="rounded-inline">(4 rounded)</span><br><span class="money">$3,165</span> <span class="rounded-inline">($3,740)</span></div>
+      </div>
+
+      <div class="summary">
+        Spoil fits in <strong>1.6 trucks</strong> (round up to 2). Bring in
+        <strong>10 m³ of gravel</strong>. Estimated charge
+        <strong style="color:var(--accent)">$3,740</strong>.
+      </div>
+
+      <details>
+        <summary>Show the maths</summary>
+        <div class="maths">
+          <div><code>Front yard: 10 × 3 × 0.1 = 3.0 m³</code></div>
+          <div><code>Driveway: 5 × 5 × 0.2 = 5.0 m³</code></div>
+          <div><code>In ground: 8.0 m³ + 30% swell = 10.4 m³</code></div>
+          <div><code>Spoil trucks: 10.4 ÷ 6.5 = 1.6</code></div>
+          <div><code>Delivery: 10 m³ + 10% compaction = 11.0 m³</code></div>
+          <div><code>Delivery trucks: 11.0 ÷ 6.5 = 1.7</code></div>
+          <div><code>Material: 10 × $45 = $450</code></div>
+          <div><code>Fuel: 3.3 × 36 km × 30 L/100 km × $2.10 = $74.84</code></div>
+        </div>
+      </details>
+
+      <div class="notice">
+        <span class="dot"></span>
+        <span>Volume-only sections ignore the weight limit. Delivery price assumes the truck rate applies to delivery trips as well as the material cost. Fuel assumes one round trip per truck and 30 L/100 km.</span>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footnote">
+    Mockup for review. Section actions, add/remove and some inputs are illustrative only;
+    the real app recalculates live. Example totals assume delivery and fuel are switched on.
+    Toggle "Bringing material", "Apply swell", "Round up", "Include travel &amp; fuel" and
+    "Custom delivery fee" to see how the layout reacts.
+  </div>
+
+</main>
+
+<div class="overlay" id="loadpanel" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label="Load job">
+    <div class="dialog-head">
+      <h2>Load job</h2>
+      <button class="icon-btn" type="button" id="closeload">Close</button>
+    </div>
+    <div class="small muted" style="margin-bottom:6px">Newest first · saved on this device only</div>
+
+    <div class="job-item">
+      <div>
+        <div class="job-item-name">Front yard - 12 Smith St</div>
+        <div class="job-item-meta">24 Oct 2026, 10:46 · 3.3 trucks · $3,740</div>
+      </div>
+      <div class="job-item-actions">
+        <button class="btn small" type="button" data-load="Front yard - 12 Smith St">Load</button>
+        <button class="icon-btn" type="button" data-delete>Delete</button>
+      </div>
+    </div>
+
+    <div class="job-item">
+      <div>
+        <div class="job-item-name">Job - 22 Oct 2026, 14:12</div>
+        <div class="job-item-meta">22 Oct 2026, 14:12 · 1.6 trucks · $1,280</div>
+      </div>
+      <div class="job-item-actions">
+        <button class="btn small" type="button" data-load="Job - 22 Oct 2026, 14:12">Load</button>
+        <button class="icon-btn" type="button" data-delete>Delete</button>
+      </div>
+    </div>
+
+    <div class="job-item">
+      <div>
+        <div class="job-item-name">24 Maple Ave - shed pad</div>
+        <div class="job-item-meta">19 Oct 2026, 09:05 · 4.0 trucks · $4,120</div>
+      </div>
+      <div class="job-item-actions">
+        <button class="btn small" type="button" data-load="24 Maple Ave - shed pad">Load</button>
+        <button class="icon-btn" type="button" data-delete>Delete</button>
+      </div>
+    </div>
+
+    <div class="footnote">Blank names are saved automatically as “Job - date, time”. Deleting a job removes it from this device only.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+  const body = document.body;
+  const roundup = document.getElementById('roundup');
+  const bringing = document.getElementById('bringing');
+  const travel = document.getElementById('traveltoggle');
+  const customfee = document.getElementById('customfee');
+  const customfeeValue = document.getElementById('customfee-value');
+  const jobname = document.getElementById('jobname');
+  const newjob = document.getElementById('newjob');
+  const savejob = document.getElementById('savejob');
+  const loadjobs = document.getElementById('loadjobs');
+  const loadpanel = document.getElementById('loadpanel');
+  const closeload = document.getElementById('closeload');
+  const toast = document.getElementById('toast');
+  let toastTimer;
+
+  function sync() {
+    body.classList.toggle('roundup', roundup.checked);
+    body.classList.toggle('bringing', bringing.checked);
+    body.classList.toggle('notravel', !travel.checked);
+    customfeeValue.disabled = !customfee.checked;
+  }
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
+  }
+
+  function stamp() {
+    const d = new Date();
+    const date = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return `${date}, ${time}`;
+  }
+
+  function closeLoad() { loadpanel.hidden = true; }
+
+  newjob.addEventListener('click', () => {
+    jobname.value = '';
+    jobname.focus();
+    showToast('New blank job - name it when you save');
+  });
+
+  savejob.addEventListener('click', () => {
+    let name = jobname.value.trim();
+    if (!name) {
+      name = `Job - ${stamp()}`;
+      jobname.value = name;
+    }
+    showToast(`Saved locally as “${name}”`);
+  });
+
+  loadjobs.addEventListener('click', () => { loadpanel.hidden = false; });
+  closeload.addEventListener('click', closeLoad);
+  loadpanel.addEventListener('click', (event) => {
+    if (event.target === loadpanel) closeLoad();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !loadpanel.hidden) closeLoad();
+  });
+
+  loadpanel.querySelectorAll('[data-load]').forEach((button) => {
+    button.addEventListener('click', () => {
+      jobname.value = button.dataset.load;
+      closeLoad();
+      showToast(`Loaded “${button.dataset.load}”`);
+    });
+  });
+
+  loadpanel.querySelectorAll('[data-delete]').forEach((button) => {
+    button.addEventListener('click', () => {
+      button.closest('.job-item').remove();
+      showToast('Job removed from this device');
+    });
+  });
+
+  roundup.addEventListener('change', sync);
+  bringing.addEventListener('change', sync);
+  travel.addEventListener('change', sync);
+  customfee.addEventListener('change', sync);
+  sync();
+</script>
+
+</body>
+</html>
