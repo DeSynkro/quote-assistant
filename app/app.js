@@ -5,8 +5,6 @@
   const sectionCountEl = document.getElementById("section-count");
   const addSectionButton = document.getElementById("add-section");
   const newJobButton = document.getElementById("new-job");
-  const capacityModeEl = document.getElementById("capacity-mode");
-  const capacityButtons = Array.from(capacityModeEl.querySelectorAll("[data-mode]"));
   const truckVolumeInput = document.getElementById("truck-volume");
   const truckWeightInput = document.getElementById("truck-weight");
   const truckPriceInput = document.getElementById("truck-price");
@@ -64,7 +62,6 @@
       manualVolume: "",
       depth: "",
       depthUnit: "mm",
-      density: "",
     }, overrides);
   }
 
@@ -84,7 +81,7 @@
       depthUnit: "mm",
       price: "",
       density: "",
-      deliveryMode: "truckRate",
+      deliveryMode: "custom",
       customFee: "",
     };
   }
@@ -254,16 +251,6 @@
         </label>
       </div>
 
-      <div class="fields one">
-        <label class="field">
-          <span>Material density (optional)</span>
-          <span class="with-unit">
-            <input type="number" inputmode="decimal" step="any" data-field="density" placeholder="Leave blank for volume only">
-            <span class="unit">t/m³</span>
-          </span>
-        </label>
-      </div>
-
       <div class="section-foot">
         <span class="chip" data-role="section-result">No volume</span>
         <span class="small muted" data-role="section-formula"></span>
@@ -350,11 +337,6 @@
         item.lengthUnit = section.lengthUnit;
         item.depth = section.depth;
         item.depthUnit = section.depthUnit;
-      }
-
-      const density = Number(section.density);
-      if (Number.isFinite(density) && density > 0) {
-        item.material = { looseDensity: density };
       }
 
       return item;
@@ -689,9 +671,7 @@
     } else if (totals.volumeInGround <= 0) {
       summaryOutput.textContent = "Add valid job dimensions to see an estimate.";
     } else if (totals.trucks.exact <= 0) {
-      summaryOutput.textContent = state.truck.capacityMode === "weight" && totals.weight === null
-        ? "Add a material density or use volume capacity to estimate truck loads."
-        : "Add a truck capacity and price to see an estimate.";
+      summaryOutput.textContent = "Add a truck capacity and price to see an estimate.";
     } else {
       const charge = money(showRounded ? totals.gst.rounded.total : totals.gst.exact.total);
       let summary = `Spoil fits in ${format(totals.trucks.exact)} ${truckWord(totals.trucks.exact)}`;
@@ -734,14 +714,6 @@
     updateResults(result);
   }
 
-  function syncCapacityButtons() {
-    for (const button of capacityButtons) {
-      const active = button.dataset.mode === state.truck.capacityMode;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    }
-  }
-
   function syncDeliveryControls() {
     deliveryEnabledInput.checked = state.delivery.enabled;
     deliveryCard.hidden = !state.delivery.enabled;
@@ -778,7 +750,6 @@
     roundUpInput.checked = state.showRounded;
     gstModeInput.value = state.gst.mode;
     gstRateInput.value = state.gst.rate;
-    syncCapacityButtons();
     syncDeliveryControls();
   }
 
@@ -882,14 +853,6 @@
       renderSections();
     }
   }
-
-  capacityButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      state.truck.capacityMode = button.dataset.mode;
-      syncCapacityButtons();
-      update();
-    });
-  });
 
   truckVolumeInput.addEventListener("input", () => {
     state.truck.volumeCapacity = truckVolumeInput.value;

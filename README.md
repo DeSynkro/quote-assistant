@@ -33,7 +33,8 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 
 - Rectangle, uneven ends, manual area and manual volume sections
 - Area, volume and formula shown for each section
-- Truck limits by volume, weight, or both
+- Volume-based spoil truck loads
+- Weight-based material delivery capacity
 - Material In with direct volume, direct weight or area × depth
 - Material cost, delivery pricing and combined spoil and delivery totals
 - Swell, price rounding and GST
@@ -42,6 +43,7 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 
 ## Still planned
 
+- Truck presets with volume, weight, fuel consumption and price
 - Material presets with density, swell and settling values
 - Save, load and name jobs
 - Uneven fill areas and multiple material entries

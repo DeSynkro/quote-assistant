@@ -24,12 +24,6 @@
       <div class="card">
         <h2>Truck</h2>
 
-        <div class="segmented" id="capacity-mode" role="group" aria-label="Truck capacity mode">
-          <button type="button" data-mode="volume">Volume</button>
-          <button type="button" data-mode="weight">Weight</button>
-          <button type="button" data-mode="both">Both</button>
-        </div>
-
         <div class="grid-3">
           <label class="field">
             <span>Volume capacity</span>
@@ -54,7 +48,7 @@
           </label>
         </div>
 
-        <div class="footnote">Both limits are checked when both capacities are present. Weight needs a material density.</div>
+        <div class="footnote">Spoil uses volume capacity. Weight capacity is used for material delivery.</div>
       </div>
 
       <div class="card">
@@ -213,8 +207,8 @@
           <label class="field">
             <span>Delivery pricing</span>
             <select id="delivery-mode" data-delivery-field="deliveryMode">
-              <option value="truckRate">Use main truck rate</option>
               <option value="custom">Custom delivery fee</option>
+              <option value="truckRate">Use main truck rate</option>
               <option value="included">Included in material price</option>
             </select>
           </label>

@@ -66,9 +66,10 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   `docker/data/jobs/`, shared by everyone using the LAN web app.
 
 ### Truck capacity
-- Truck size can be entered as volume (m³), weight (tonnes), or **both**.
-- When both are given, check both limits and report which one actually binds
-  (volume-limited vs weight-limited).
+- Spoil uses volume capacity only in the current UI.
+- Weight capacity remains editable and is used for material delivery.
+- The calculation engine still supports volume, weight, or both for spoil, but
+  the Weight and Both spoil tabs are hidden for now and can return later.
 - Reference truck: roughly 8 t and 6.5 m³, both editable.
 - Price is entered **per truck** and scales with the number of trucks.
 
@@ -85,10 +86,12 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   or use manual area.
 
 ### Materials and density
-- Volume-only is the default path; weight and density are optional.
-- Material presets are available but optional. Presets carry loose bulk density,
+- Spoil is volume-only in the current UI.
+- Section material density is not exposed; the engine still supports it for
+  possible future use.
+- Material In has its own density field for delivery weight checks.
+- Material presets are still planned. Presets will carry loose bulk density,
   swell %, and (for rubble) a voids %.
-- Presets are starting points only; every value is editable per job.
 - Concrete removal needs void/air-gap handling, not just solid density.
 
 ### Swell / bulking
@@ -130,8 +133,8 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   weight, volume for volume and area, and both when density makes both known.
   This is independent of the spoil capacity mode.
 - Delivery pricing options:
+  - Custom delivery fee (default).
   - Use the main truck rate.
-  - Custom delivery fee.
   - Delivery included in the material price.
 - A custom delivery fee overrides the calculated delivery trip cost only. The
   material cost stays separate.
