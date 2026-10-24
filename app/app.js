@@ -24,6 +24,24 @@
   const summaryOutput = document.getElementById("summary");
   const warningsOutput = document.getElementById("warnings");
   const mathsOutput = document.getElementById("maths");
+  const deliveryEnabledInput = document.getElementById("delivery-enabled");
+  const deliveryCard = document.getElementById("delivery-card");
+  const deliveryAmountFields = document.getElementById("delivery-amount-fields");
+  const deliveryAmountUnit = document.getElementById("delivery-amount-unit");
+  const deliveryAreaFields = document.getElementById("delivery-area-fields");
+  const deliverySettlingFields = document.getElementById("delivery-settling-fields");
+  const deliverySettlingPercentField = document.getElementById("delivery-settling-percent-field");
+  const deliveryAddSettlingField = document.getElementById("delivery-add-settling-field");
+  const deliveryPriceUnit = document.getElementById("delivery-price-unit");
+  const deliveryCustomFeeField = document.getElementById("delivery-custom-fee-field");
+  const trucksLabelOutput = document.getElementById("result-trucks-label");
+  const materialRow = document.getElementById("result-material-row");
+  const materialLabel = document.getElementById("result-material-label");
+  const materialVolumeOutput = document.getElementById("result-material-volume");
+  const materialSubOutput = document.getElementById("result-material-sub");
+  const combinedRow = document.getElementById("result-combined-row");
+  const combinedTrucksOutput = document.getElementById("result-combined-trucks");
+  const combinedSubOutput = document.getElementById("result-combined-sub");
 
   let nextSectionId = 1;
 
@@ -48,6 +66,27 @@
       depthUnit: "mm",
       density: "",
     }, overrides);
+  }
+
+  function createDelivery() {
+    return {
+      enabled: false,
+      materialName: "",
+      amountBasis: "volume",
+      amount: "",
+      addSettling: false,
+      settlingPercent: "10",
+      width: "",
+      widthUnit: "m",
+      length: "",
+      lengthUnit: "m",
+      depth: "",
+      depthUnit: "mm",
+      price: "",
+      density: "",
+      deliveryMode: "truckRate",
+      customFee: "",
+    };
   }
 
   const state = {
@@ -75,6 +114,7 @@
       mode: "none",
       rate: "10",
     },
+    delivery: createDelivery(),
     showRounded: true,
   };
 
@@ -336,6 +376,26 @@
         mode: state.gst.mode,
         rate: state.gst.rate,
       },
+      delivery: state.delivery.enabled
+        ? {
+          enabled: true,
+          materialName: state.delivery.materialName,
+          amountBasis: state.delivery.amountBasis,
+          amount: state.delivery.amount,
+          addSettling: state.delivery.addSettling,
+          settlingPercent: state.delivery.settlingPercent,
+          width: state.delivery.width,
+          widthUnit: state.delivery.widthUnit,
+          length: state.delivery.length,
+          lengthUnit: state.delivery.lengthUnit,
+          depth: state.delivery.depth,
+          depthUnit: state.delivery.depthUnit,
+          price: state.delivery.price,
+          density: state.delivery.density,
+          deliveryMode: state.delivery.deliveryMode,
+          customFee: state.delivery.customFee,
+        }
+        : { enabled: false },
     };
   }
 
@@ -409,44 +469,107 @@
     mathsOutput.appendChild(row);
   }
 
+  function truckCountText(trucks, showRounded) {
+    let text = `${format(trucks.exact)} trucks`;
+    if (showRounded && trucks.rounded !== trucks.exact) {
+      text += ` (${trucks.rounded} rounded)`;
+    }
+    return text;
+  }
+
+  function spoilLimitText(totals) {
+    if (totals.trucks.limit === "volume") {
+      return "Limited by volume";
+    }
+    if (totals.trucks.limit === "weight") {
+      return "Limited by weight";
+    }
+    if (totals.volumeInGround <= 0) {
+      return "Add valid dimensions";
+    }
+    if (state.truck.capacityMode === "weight" && totals.weight === null) {
+      return "Weight unknown";
+    }
+    return "Add a truck capacity";
+  }
+
+  function materialAmountText(delivery) {
+    if (delivery.deliveredVolume !== null) {
+      return `${format(delivery.deliveredVolume)} m³`;
+    }
+    if (delivery.weight !== null) {
+      return `${format(delivery.weight)} t`;
+    }
+    return "0 m³";
+  }
+
+  function materialHasAmount(delivery) {
+    return delivery.deliveredVolume !== null || delivery.weight !== null;
+  }
+
   function updateMaths(result) {
     const totals = result.totals;
+    const delivery = totals.delivery;
+    const finalGst = delivery ? totals.combined.gst : totals.gst;
     mathsOutput.innerHTML = "";
 
     if (result.sections.length === 0) {
-      appendMathRow("No sections yet.");
-      return;
+      appendMathRow("No spoil sections.");
+    } else {
+      for (const section of result.sections) {
+        const details = section.area === null
+          ? `${format(section.volume)} m³`
+          : `${format(section.area)} m² · ${format(section.volume)} m³`;
+        appendMathRow(`${section.name}: ${details}`);
+      }
+      appendMathRow(`Spoil in ground: ${format(totals.volumeInGround)} m³`);
+      appendMathRow(`Spoil loose after swell: ${format(totals.volumeLoose)} m³`);
+
+      if (totals.weight !== null) {
+        appendMathRow(`Spoil weight: ${format(totals.weight)} t`);
+      }
+
+      appendMathRow(`Spoil trucks: ${format(totals.trucks.exact)} exact · ${totals.trucks.rounded} rounded`);
+      appendMathRow(`Spoil price: ${money(totals.price.exact)} exact · ${money(totals.price.rounded)} rounded`);
     }
 
-    for (const section of result.sections) {
-      const details = section.area === null
-        ? `${format(section.volume)} m³`
-        : `${format(section.area)} m² · ${format(section.volume)} m³`;
-      appendMathRow(`${section.name}: ${details}`);
+    if (delivery) {
+      appendMathRow(`Material: ${delivery.materialName || "material"}`);
+
+      if (delivery.finishedVolume !== null) {
+        appendMathRow(`Finished fill volume: ${format(delivery.finishedVolume)} m³`);
+      }
+
+      if (delivery.deliveredVolume !== null) {
+        appendMathRow(`Delivered volume: ${format(delivery.deliveredVolume)} m³`);
+      }
+
+      if (delivery.weight !== null) {
+        appendMathRow(`Material weight: ${format(delivery.weight)} t`);
+      }
+
+      appendMathRow(`Material cost: ${money(delivery.materialCost)}`);
+      appendMathRow(`Delivery trucks: ${format(delivery.trucks.exact)} exact · ${delivery.trucks.rounded} rounded`);
+      appendMathRow(`Delivery trips: ${money(delivery.tripCost.exact)} exact · ${money(delivery.tripCost.rounded)} rounded`);
+      appendMathRow(`Delivery total: ${money(delivery.total.exact)} exact · ${money(delivery.total.rounded)} rounded`);
+      appendMathRow(`Combined trucks: ${format(totals.combined.trucks.exact)} exact · ${totals.combined.trucks.rounded} rounded`);
+      appendMathRow(`Combined price: ${money(totals.combined.price.exact)} exact · ${money(totals.combined.price.rounded)} rounded`);
     }
 
-    appendMathRow(`Total in ground: ${format(totals.volumeInGround)} m³`);
-    appendMathRow(`Loose after swell: ${format(totals.volumeLoose)} m³`);
-
-    if (totals.weight !== null) {
-      appendMathRow(`Weight: ${format(totals.weight)} t`);
-    }
-
-    appendMathRow(`Trucks: ${format(totals.trucks.exact)} exact · ${totals.trucks.rounded} rounded`);
-    appendMathRow(`Price: ${money(totals.price.exact)} exact · ${money(totals.price.rounded)} rounded`);
-    appendMathRow(`Charge: ${money(totals.gst.exact.total)} exact · ${money(totals.gst.rounded.total)} rounded`);
+    appendMathRow(`Charge: ${money(finalGst.exact.total)} exact · ${money(finalGst.rounded.total)} rounded`);
 
     if (state.gst.mode !== "none") {
-      appendMathRow(`GST: ${money(totals.gst.exact.gst)} exact · ${money(totals.gst.rounded.gst)} rounded`);
+      appendMathRow(`GST: ${money(finalGst.exact.gst)} exact · ${money(finalGst.rounded.gst)} rounded`);
     }
   }
 
   function updateResults(result) {
     const totals = result.totals;
-    const trucks = totals.trucks;
-    const gstExact = totals.gst.exact;
-    const gstRounded = totals.gst.rounded;
+    const delivery = totals.delivery;
+    const combined = totals.combined;
     const showRounded = state.showRounded;
+    const finalTrucks = delivery ? combined.trucks : totals.trucks;
+    const finalGst = delivery ? combined.gst : totals.gst;
 
     volumeOutput.textContent = `${format(totals.volumeInGround)} m³`;
 
@@ -458,27 +581,48 @@
     }
     volumeSubOutput.textContent = volumeSub;
 
-    let truckText = `${format(trucks.exact)} trucks`;
-    if (showRounded && trucks.rounded !== trucks.exact) {
-      truckText += ` (${trucks.rounded} rounded)`;
+    trucksLabelOutput.textContent = delivery ? "Spoil truck loads" : "Truck loads";
+    trucksOutput.textContent = truckCountText(totals.trucks, showRounded);
+    limitOutput.textContent = `${spoilLimitText(totals)} · ${money(totals.price.exact)} exact${showRounded && totals.price.rounded !== totals.price.exact ? ` · ${money(totals.price.rounded)} rounded` : ""}`;
+
+    materialRow.hidden = !delivery;
+    combinedRow.hidden = !delivery;
+
+    if (delivery) {
+      materialLabel.textContent = delivery.materialName
+        ? `Material to bring in: ${delivery.materialName}`
+        : "Material to bring in";
+      materialVolumeOutput.textContent = materialAmountText(delivery);
+
+      if (!materialHasAmount(delivery)) {
+        materialSubOutput.textContent = "Enter the amount of material.";
+      } else if (delivery.materialCost <= 0) {
+        materialSubOutput.textContent = "Enter the material price.";
+      } else {
+        let sub = "";
+        if (delivery.deliveredVolume !== null && delivery.weight !== null) {
+          sub += `${format(delivery.weight)} t · `;
+        }
+        sub += truckCountText(delivery.trucks, showRounded);
+        if (delivery.trucks.limit === "volume") {
+          sub += " · volume-limited";
+        } else if (delivery.trucks.limit === "weight") {
+          sub += " · weight-limited";
+        }
+        sub += ` · ${money(delivery.total.exact)} exact`;
+        if (showRounded && delivery.total.rounded !== delivery.total.exact) {
+          sub += ` · ${money(delivery.total.rounded)} rounded`;
+        }
+        materialSubOutput.textContent = sub;
+      }
+
+      combinedTrucksOutput.textContent = truckCountText(combined.trucks, showRounded);
+      combinedSubOutput.textContent = `Spoil and delivery trips · ${money(combined.price.exact)} exact${showRounded && combined.price.rounded !== combined.price.exact ? ` · ${money(combined.price.rounded)} rounded` : ""}`;
     }
-    trucksOutput.textContent = truckText;
 
-    if (trucks.limit === "volume") {
-      limitOutput.textContent = "Limited by volume";
-    } else if (trucks.limit === "weight") {
-      limitOutput.textContent = "Limited by weight";
-    } else if (totals.volumeInGround <= 0) {
-      limitOutput.textContent = "Add valid dimensions";
-    } else if (state.truck.capacityMode === "weight" && totals.weight === null) {
-      limitOutput.textContent = "Weight unknown";
-    } else {
-      limitOutput.textContent = "Add a truck capacity";
-    }
+    priceOutput.textContent = money(finalGst.exact.total);
 
-    priceOutput.textContent = money(gstExact.total);
-
-    const gstAmount = showRounded ? gstRounded.gst : gstExact.gst;
+    const gstAmount = showRounded ? finalGst.rounded.gst : finalGst.exact.gst;
     let gstText = "No GST";
     if (state.gst.mode === "add") {
       gstText = `GST ${display(state.gst.rate)}%: ${money(gstAmount)}`;
@@ -487,20 +631,51 @@
     }
 
     priceSubOutput.textContent = showRounded
-      ? `Rounded: ${money(gstRounded.total)} · ${gstText}`
+      ? `Rounded: ${money(finalGst.rounded.total)} · ${gstText}`
       : gstText;
 
-    if (totals.volumeInGround <= 0) {
+    if (delivery) {
+      if (!materialHasAmount(delivery)) {
+        summaryOutput.textContent = totals.volumeInGround > 0
+          ? "Spoil estimate is ready. Add the material amount and price to include delivery."
+          : "Add job dimensions and material details to see an estimate.";
+      } else {
+        const charge = money(showRounded ? finalGst.rounded.total : finalGst.exact.total);
+        let summary = "";
+
+        if (totals.volumeInGround > 0) {
+          summary += `Spoil fits in ${format(totals.trucks.exact)} trucks`;
+          if (showRounded && totals.trucks.rounded !== totals.trucks.exact) {
+            summary += ` (round up to ${totals.trucks.rounded})`;
+          }
+          summary += ". ";
+        }
+
+        summary += `Bring in ${materialAmountText(delivery)} of material. `;
+
+        if (finalTrucks.exact > 0) {
+          summary += `About ${format(finalTrucks.exact)} trucks there and back`;
+          if (showRounded && finalTrucks.rounded !== finalTrucks.exact) {
+            summary += ` (round up to ${finalTrucks.rounded})`;
+          }
+          summary += `. Estimated charge ${charge}.`;
+        } else {
+          summary += "Add truck capacities to estimate the total.";
+        }
+
+        summaryOutput.textContent = summary;
+      }
+    } else if (totals.volumeInGround <= 0) {
       summaryOutput.textContent = "Add valid job dimensions to see an estimate.";
-    } else if (trucks.exact <= 0) {
+    } else if (totals.trucks.exact <= 0) {
       summaryOutput.textContent = state.truck.capacityMode === "weight" && totals.weight === null
         ? "Add a material density or use volume capacity to estimate truck loads."
         : "Add a truck capacity and price to see an estimate.";
     } else {
-      const charge = money(showRounded ? gstRounded.total : gstExact.total);
-      let summary = `Spoil fits in ${format(trucks.exact)} trucks`;
-      if (showRounded && trucks.rounded !== trucks.exact) {
-        summary += ` (round up to ${trucks.rounded})`;
+      const charge = money(showRounded ? totals.gst.rounded.total : totals.gst.exact.total);
+      let summary = `Spoil fits in ${format(totals.trucks.exact)} trucks`;
+      if (showRounded && totals.trucks.rounded !== totals.trucks.exact) {
+        summary += ` (round up to ${totals.trucks.rounded})`;
       }
       summary += `. Estimated charge ${charge}.`;
       summaryOutput.textContent = summary;
@@ -546,6 +721,33 @@
     }
   }
 
+  function syncDeliveryControls() {
+    deliveryEnabledInput.checked = state.delivery.enabled;
+    deliveryCard.hidden = !state.delivery.enabled;
+
+    for (const element of deliveryCard.querySelectorAll("[data-delivery-field]")) {
+      const field = element.dataset.deliveryField;
+      if (element.type === "checkbox") {
+        element.checked = Boolean(state.delivery[field]);
+      } else {
+        element.value = state.delivery[field] ?? "";
+      }
+    }
+
+    const basis = state.delivery.amountBasis;
+    const isWeight = basis === "weight";
+    const isArea = basis === "area";
+
+    deliveryAmountFields.hidden = isArea;
+    deliveryAreaFields.hidden = !isArea;
+    deliverySettlingFields.hidden = isWeight;
+    deliverySettlingPercentField.hidden = isWeight;
+    deliveryAddSettlingField.hidden = basis !== "volume";
+    deliveryAmountUnit.textContent = isWeight ? "t" : "m³";
+    deliveryPriceUnit.textContent = isWeight ? "/ t" : "/ m³";
+    deliveryCustomFeeField.hidden = state.delivery.deliveryMode !== "custom";
+  }
+
   function syncStaticControls() {
     truckVolumeInput.value = state.truck.volumeCapacity;
     truckWeightInput.value = state.truck.weightCapacity;
@@ -556,6 +758,24 @@
     gstModeInput.value = state.gst.mode;
     gstRateInput.value = state.gst.rate;
     syncCapacityButtons();
+    syncDeliveryControls();
+  }
+
+  function handleDeliveryInput(event) {
+    const field = event.target.dataset.deliveryField;
+    if (!field) {
+      return;
+    }
+
+    state.delivery[field] = event.target.type === "checkbox"
+      ? event.target.checked
+      : event.target.value;
+
+    if (field === "amountBasis" || field === "deliveryMode") {
+      syncDeliveryControls();
+    }
+
+    update();
   }
 
   function handleSectionInput(event) {
@@ -690,6 +910,15 @@
     update();
   });
 
+  deliveryEnabledInput.addEventListener("change", () => {
+    state.delivery.enabled = deliveryEnabledInput.checked;
+    syncDeliveryControls();
+    update();
+  });
+
+  deliveryCard.addEventListener("input", handleDeliveryInput);
+  deliveryCard.addEventListener("change", handleDeliveryInput);
+
   sectionsEl.addEventListener("input", handleSectionInput);
   sectionsEl.addEventListener("change", handleSectionInput);
   sectionsEl.addEventListener("click", handleSectionAction);
@@ -712,6 +941,8 @@
       return;
     }
     state.sections = [createSection()];
+    state.delivery = createDelivery();
+    syncDeliveryControls();
     renderSections();
   });
 

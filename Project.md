@@ -11,8 +11,8 @@ UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-
 - Calculation engine: `app/calc.js`.
 - Manual test sandbox: `tests/tests.html`.
 - Terminal tests: `node tests/run-tests.js`.
-- Working: section shapes, swell, truck loads, price, rounding, GST, warnings and the browser UI.
-- Not yet built: material presets, save and load, delivery, fuel, native packaging and Docker sharing.
+- Working: section shapes, swell, truck loads, price, rounding, GST, Material In, delivery pricing, combined totals, warnings and the browser UI.
+- Not yet built: material presets, save and load, uneven fill areas, multiple materials, fuel, native packaging and Docker sharing.
 
 ---
 
@@ -114,20 +114,30 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Complex outlines should be split into multiple sections or entered as manual
   area.
 
-### Bring-in material (added during discussion)
+### Bring-in material (implemented)
 - Some jobs also require material to be brought **to** the site, not just spoil
   removed.
-- A per-job checkbox ("Bringing material?") reveals a separate delivery segment.
-- Choose a preset or define a custom material, with a price per m³ or per tonne
-  and the amount required.
-- The delivery segment calculates its own truck count (e.g. "You need to bring
-  X trucks") and its own cost.
-- The job shows three results: removal trucks/price, delivery trucks/price, and
-  a combined "roughly X trucks there and back, charge X" total.
-- Optional **Custom delivery fee** checkbox, blank by default. When enabled it
-  overrides the calculated delivery trip cost; the material cost stays separate.
-- Full calculation rules for delivery (how the amount is derived, compaction,
-  and whether truck rate is charged per delivery trip) still to be confirmed.
+- A per-job toggle ("Bringing material to site?") reveals the Material In card.
+- One material entry per job in v1.
+- Amount methods: direct volume (m³), direct weight (tonnes), or area × depth.
+- Direct volume and area × depth use a settling allowance to convert finished
+  fill into loose delivered volume. Direct volume can choose whether to apply
+  the allowance. Area × depth always applies it.
+- Direct weight is entered in tonnes and has no settling allowance.
+- Material price is per m³ for volume and area, and per tonne for weight.
+- Optional density is used for weight limits and unit conversion.
+- Delivery pricing options:
+  - Use the main truck rate.
+  - Custom delivery fee.
+  - Delivery included in the material price.
+- A custom delivery fee overrides the calculated delivery trip cost only. The
+  material cost stays separate.
+- Spoil and delivery trips are treated as separate trips in v1.
+- Combined trucks are spoil trucks plus delivery trucks.
+- Combined price is spoil price plus material cost plus delivery trip cost.
+- GST is applied to the combined charge.
+- Area × depth is a rectangle in v1. Use direct volume for irregular fill areas.
+- Multiple materials and uneven fill areas are later additions.
 
 ### Travel and fuel (added during discussion)
 - Optional section below Material In, disabled by default.
@@ -221,12 +231,10 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - One truck type per job, or switchable saved truck presets?
 - Currency assumed AUD (`$`). Confirm.
 - Real-world swell / voids / bulk-density numbers to seed the material presets.
-- For bring-in material: is the amount derived from area × depth, entered
-  directly, or both? Does delivered material need a compaction/settling factor?
-- For bring-in material: is the truck rate charged on delivery trips as well as
-  the material price, or does the material price include delivery?
-- Custom delivery fee: does it replace only the calculated delivery trip cost,
-  or the entire Material In total including the material price?
+- Should spoil and delivery trips be combinable, where the same truck can return
+  with material? Currently they are separate trips.
+- Should fill areas support uneven ends and manual area, or is rectangle plus
+  direct volume enough?
 - Fuel estimate: confirm the formula (total trucks × one-way distance × 2 ×
   fuel use ÷ 100 × diesel price) and the default fuel-use figure, or make it a
   saved setting.
@@ -240,8 +248,6 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   job; remember the last used.
 - **Material preset table**: topsoil, sand, gravel, crushed rock, clay, concrete
   rubble - each with loose density, swell and voids, all editable.
-- **Show the maths**: expandable breakdown per section (`10 × 3 × 0.1 = 3 m³`,
-  `+30% swell = 3.9 m³`) so the number can be trusted and checked.
 - **Autosave the current job** locally so an accidental close doesn't lose it.
 - **Job search / filter** once there are many saved jobs; show recent jobs on the
   start-up screen.

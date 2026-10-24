@@ -168,6 +168,161 @@
     return { total: value, gst };
   }
 
+  function calculateDelivery(delivery, truck, pricePerTruck) {
+    const source = delivery || {};
+    const spec = truck || {};
+    const warnings = [];
+    const basis = source.amountBasis === "area" || source.amountBasis === "weight"
+      ? source.amountBasis
+      : "volume";
+    const density = positiveNumber(source.density);
+    const price = Number(source.price);
+    const priceValid = Number.isFinite(price) && price > 0;
+    let finishedVolume = null;
+    let deliveredVolume = null;
+    let weight = null;
+    let amountValue = null;
+
+    if (basis === "area") {
+      const width = toMetres(source.width, source.widthUnit);
+      const length = toMetres(source.length, source.lengthUnit);
+      const depth = toMetres(source.depth, source.depthUnit);
+      const volume = width * length * depth;
+
+      if (Number.isFinite(volume) && volume > 0) {
+        finishedVolume = volume;
+        const settling = Number(source.settlingPercent);
+        const factor = Number.isFinite(settling) && settling > 0
+          ? 1 + settling / 100
+          : 1;
+        deliveredVolume = finishedVolume * factor;
+        amountValue = deliveredVolume;
+      }
+    } else if (basis === "weight") {
+      const amount = Number(source.amount);
+
+      if (Number.isFinite(amount) && amount > 0) {
+        weight = amount;
+        amountValue = amount;
+        if (density !== null) {
+          deliveredVolume = amount / density;
+        }
+      }
+    } else {
+      const amount = Number(source.amount);
+
+      if (Number.isFinite(amount) && amount > 0) {
+        if (source.addSettling) {
+          const settling = Number(source.settlingPercent);
+          const factor = Number.isFinite(settling) && settling > 0
+            ? 1 + settling / 100
+            : 1;
+          finishedVolume = amount;
+          deliveredVolume = amount * factor;
+        } else {
+          deliveredVolume = amount;
+        }
+        amountValue = deliveredVolume;
+      }
+    }
+
+    if (deliveredVolume !== null && density !== null && basis !== "weight") {
+      weight = deliveredVolume * density;
+    }
+
+    if (amountValue === null || !Number.isFinite(amountValue) || amountValue <= 0) {
+      warnings.push({
+        code: "material-missing-amount",
+        message: "Enter the amount of material to bring in.",
+      });
+    }
+
+    if (!priceValid) {
+      warnings.push({
+        code: "material-missing-price",
+        message: "Enter a material price.",
+      });
+    }
+
+    const mode = spec.capacityMode === "volume"
+      || spec.capacityMode === "weight"
+      || spec.capacityMode === "both"
+      ? spec.capacityMode
+      : "both";
+    const weightNeeded = mode !== "volume";
+    const weightCapacity = positiveNumber(spec.weightCapacity);
+
+    if (weightNeeded && weight === null) {
+      warnings.push({
+        code: "material-weight-unknown",
+        message: "Weight is unknown because no material density was entered.",
+      });
+    }
+
+    if (deliveredVolume === null && (mode === "volume" || (mode === "both" && weightCapacity === null))) {
+      warnings.push({
+        code: "material-volume-unknown",
+        message: "Enter a material density to calculate the delivery volume.",
+      });
+    }
+
+    const amount = basis === "weight" ? weight : deliveredVolume;
+    const materialCost = amountValue !== null && priceValid && amount !== null
+      ? amount * price
+      : 0;
+    const loads = truckLoads(
+      { volume: deliveredVolume, weight },
+      {
+        capacityMode: mode,
+        volumeCapacity: spec.volumeCapacity,
+        weightCapacity: spec.weightCapacity,
+      }
+    );
+    const deliveryMode = source.deliveryMode === "custom" || source.deliveryMode === "included"
+      ? source.deliveryMode
+      : "truckRate";
+    let tripExact = 0;
+    let tripRounded = 0;
+
+    if (deliveryMode === "truckRate") {
+      const rate = Number(pricePerTruck);
+      const validRate = Number.isFinite(rate) && rate > 0 ? rate : 0;
+      tripExact = loads.exact * validRate;
+      tripRounded = loads.rounded * validRate;
+    } else if (deliveryMode === "custom") {
+      const fee = Number(source.customFee);
+      if (Number.isFinite(fee) && fee > 0) {
+        tripExact = fee;
+        tripRounded = fee;
+      } else {
+        warnings.push({
+          code: "material-missing-custom-fee",
+          message: "Enter a custom delivery fee.",
+        });
+      }
+    }
+
+    return {
+      enabled: true,
+      materialName: String(source.materialName || "").trim(),
+      amountBasis: basis,
+      finishedVolume,
+      deliveredVolume,
+      weight,
+      materialCost,
+      trucks: loads,
+      tripCost: {
+        exact: tripExact,
+        rounded: tripRounded,
+      },
+      total: {
+        exact: materialCost + tripExact,
+        rounded: materialCost + tripRounded,
+      },
+      warnings,
+    };
+  }
+
   function sectionName(section, index) {
     const name = section && section.name ? String(section.name).trim() : "";
     return name || `Section ${index + 1}`;
@@ -285,6 +440,18 @@
     const price = calculatePrice(loads.exact, source.pricePerTruck);
     const gstExact = applyGst(price.exact, gst.mode, gst.rate);
     const gstRounded = applyGst(price.rounded, gst.mode, gst.rate);
+    const delivery = source.delivery && source.delivery.enabled
+      ? calculateDelivery(source.delivery, truck, source.pricePerTruck)
+      : null;
+
+    if (delivery) {
+      warnings.push(...delivery.warnings);
+    }
+
+    const combinedPriceExact = price.exact + (delivery ? delivery.total.exact : 0);
+    const combinedPriceRounded = price.rounded + (delivery ? delivery.total.rounded : 0);
+    const combinedGstExact = applyGst(combinedPriceExact, gst.mode, gst.rate);
+    const combinedGstRounded = applyGst(combinedPriceRounded, gst.mode, gst.rate);
 
     return {
       sections: results,
@@ -297,6 +464,22 @@
         gst: {
           exact: gstExact,
           rounded: gstRounded,
+        },
+        delivery,
+        combined: {
+          trucks: {
+            exact: loads.exact + (delivery ? delivery.trucks.exact : 0),
+            rounded: loads.rounded + (delivery ? delivery.trucks.rounded : 0),
+            limit: delivery ? null : loads.limit,
+          },
+          price: {
+            exact: combinedPriceExact,
+            rounded: combinedPriceRounded,
+          },
+          gst: {
+            exact: combinedGstExact,
+            rounded: combinedGstRounded,
+          },
         },
       },
       warnings,
@@ -311,6 +494,7 @@
     truckLoads,
     calculatePrice,
     applyGst,
+    calculateDelivery,
     calculateJob,
   };
 });

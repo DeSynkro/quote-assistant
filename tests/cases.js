@@ -59,6 +59,21 @@
       };
     }
 
+    function sampleDelivery(overrides) {
+      return Object.assign({
+        enabled: true,
+        materialName: "Gravel",
+        amountBasis: "volume",
+        amount: 10,
+        price: 45,
+        density: 1.5,
+        deliveryMode: "truckRate",
+        customFee: "",
+        addSettling: false,
+        settlingPercent: 10,
+      }, overrides || {});
+    }
+
     return [
       {
         name: "converts metres to metres",
@@ -643,6 +658,220 @@
           closeTo(result.totals.gst.exact.gst, 1280 - 1280 / 1.1, "exact gst");
           closeTo(result.totals.gst.rounded.total, 1600, "rounded total");
           closeTo(result.totals.gst.rounded.gst, 1600 - 1600 / 1.1, "rounded gst");
+        },
+      },
+      {
+        name: "calculates direct volume delivery",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery(),
+            { capacityMode: "both", volumeCapacity: 6.5, weightCapacity: 8 },
+            800
+          );
+          closeTo(result.deliveredVolume, 10, "delivered volume");
+          closeTo(result.weight, 15, "weight");
+          closeTo(result.materialCost, 450, "material cost");
+          closeTo(result.trucks.exact, 1.875, "exact trucks");
+          equal(result.trucks.rounded, 2, "rounded trucks");
+          equal(result.trucks.limit, "weight", "limit");
+          closeTo(result.tripCost.exact, 1500, "exact trip cost");
+          closeTo(result.tripCost.rounded, 1600, "rounded trip cost");
+          closeTo(result.total.exact, 1950, "exact total");
+          closeTo(result.total.rounded, 2050, "rounded total");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "applies settling to direct volume delivery",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({ addSettling: true, settlingPercent: 10 }),
+            { capacityMode: "volume", volumeCapacity: 6.5 },
+            800
+          );
+          closeTo(result.finishedVolume, 10, "finished volume");
+          closeTo(result.deliveredVolume, 11, "delivered volume");
+          closeTo(result.weight, 16.5, "weight");
+          closeTo(result.materialCost, 495, "material cost");
+        },
+      },
+      {
+        name: "calculates area and depth delivery",
+        run() {
+          const delivery = sampleDelivery({
+            amountBasis: "area",
+            width: 10,
+            widthUnit: "m",
+            length: 5,
+            lengthUnit: "m",
+            depth: 100,
+            depthUnit: "mm",
+            settlingPercent: 10,
+          });
+          const result = Calc.calculateDelivery(
+            delivery,
+            { capacityMode: "volume", volumeCapacity: 6.5 },
+            800
+          );
+          closeTo(result.finishedVolume, 5, "finished volume");
+          closeTo(result.deliveredVolume, 5.5, "delivered volume");
+          closeTo(result.weight, 8.25, "weight");
+          closeTo(result.materialCost, 247.5, "material cost");
+        },
+      },
+      {
+        name: "calculates weight-based delivery",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({ amountBasis: "weight", amount: 10, price: 80 }),
+            { capacityMode: "weight", weightCapacity: 8 },
+            800
+          );
+          closeTo(result.weight, 10, "weight");
+          closeTo(result.deliveredVolume, 10 / 1.5, "delivered volume");
+          closeTo(result.materialCost, 800, "material cost");
+        },
+      },
+      {
+        name: "uses a custom delivery fee",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({ deliveryMode: "custom", customFee: 500 }),
+            { capacityMode: "volume", volumeCapacity: 6.5 },
+            800
+          );
+          closeTo(result.tripCost.exact, 500, "exact trip cost");
+          closeTo(result.tripCost.rounded, 500, "rounded trip cost");
+          closeTo(result.total.exact, 950, "exact total");
+          closeTo(result.total.rounded, 950, "rounded total");
+        },
+      },
+      {
+        name: "uses no trip cost when delivery is included",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({ deliveryMode: "included" }),
+            { capacityMode: "volume", volumeCapacity: 6.5 },
+            800
+          );
+          closeTo(result.tripCost.exact, 0, "exact trip cost");
+          closeTo(result.tripCost.rounded, 0, "rounded trip cost");
+          closeTo(result.total.exact, 450, "exact total");
+        },
+      },
+      {
+        name: "warns about missing material amount and price",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({ amount: 0, price: 0 }),
+            { capacityMode: "volume", volumeCapacity: 6.5 },
+            800
+          );
+          equal(
+            result.warnings.some((warning) => warning.code === "material-missing-amount"),
+            true,
+            "missing amount warning"
+          );
+          equal(
+            result.warnings.some((warning) => warning.code === "material-missing-price"),
+            true,
+            "missing price warning"
+          );
+        },
+      },
+      {
+        name: "warns about a missing custom delivery fee",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({ deliveryMode: "custom", customFee: "" }),
+            { capacityMode: "volume", volumeCapacity: 6.5 },
+            800
+          );
+          equal(
+            result.warnings.some((warning) => warning.code === "material-missing-custom-fee"),
+            true,
+            "missing custom fee warning"
+          );
+        },
+      },
+      {
+        name: "warns when delivery weight is unknown",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({ density: undefined }),
+            { capacityMode: "both", volumeCapacity: 6.5, weightCapacity: 8 },
+            800
+          );
+          equal(result.weight, null, "weight");
+          equal(
+            result.warnings.some((warning) => warning.code === "material-weight-unknown"),
+            true,
+            "unknown weight warning"
+          );
+        },
+      },
+      {
+        name: "warns when delivery volume is unknown",
+        run() {
+          const result = Calc.calculateDelivery(
+            sampleDelivery({
+              amountBasis: "weight",
+              amount: 10,
+              price: 80,
+              density: undefined,
+            }),
+            { capacityMode: "volume", volumeCapacity: 6.5 },
+            800
+          );
+          equal(result.deliveredVolume, null, "delivered volume");
+          equal(
+            result.warnings.some((warning) => warning.code === "material-volume-unknown"),
+            true,
+            "unknown volume warning"
+          );
+        },
+      },
+      {
+        name: "adds delivery to the job totals",
+        run() {
+          const job = sampleJob();
+          job.delivery = sampleDelivery();
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.delivery.materialCost, 450, "material cost");
+          closeTo(result.totals.delivery.total.exact, 450 + (10 / 6.5) * 800, "delivery exact");
+          closeTo(result.totals.delivery.total.rounded, 2050, "delivery rounded");
+          closeTo(result.totals.combined.trucks.exact, 1.6 + 10 / 6.5, "combined exact trucks");
+          equal(result.totals.combined.trucks.rounded, 4, "combined rounded trucks");
+          closeTo(result.totals.combined.price.exact, 1280 + 450 + (10 / 6.5) * 800, "combined exact price");
+          closeTo(result.totals.combined.price.rounded, 3650, "combined rounded price");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "applies GST to the combined job total",
+        run() {
+          const job = sampleJob();
+          job.truck.capacityMode = "both";
+          job.delivery = sampleDelivery();
+          job.gst = { mode: "add", rate: 10 };
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.combined.gst.exact.total, 3553, "combined exact total");
+          closeTo(result.totals.combined.gst.exact.gst, 323, "combined exact gst");
+          closeTo(result.totals.combined.gst.rounded.total, 4015, "combined rounded total");
+          closeTo(result.totals.combined.gst.rounded.gst, 365, "combined rounded gst");
+        },
+      },
+      {
+        name: "keeps combined totals equal to spoil when delivery is disabled",
+        run() {
+          const job = sampleJob();
+          job.delivery = { enabled: false };
+          const result = Calc.calculateJob(job);
+          equal(result.totals.delivery, null, "delivery");
+          closeTo(result.totals.combined.trucks.exact, 1.6, "combined exact trucks");
+          equal(result.totals.combined.trucks.rounded, 2, "combined rounded trucks");
+          closeTo(result.totals.combined.price.exact, 1280, "combined exact price");
+          closeTo(result.totals.combined.price.rounded, 1600, "combined rounded price");
         },
       },
     ];

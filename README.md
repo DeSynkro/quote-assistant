@@ -34,6 +34,8 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 - Rectangle, uneven ends, manual area and manual volume sections
 - Area, volume and formula shown for each section
 - Truck limits by volume, weight, or both
+- Material In with direct volume, direct weight or area × depth
+- Material cost, delivery pricing and combined spoil and delivery totals
 - Swell, price rounding and GST
 - Live estimate, totals and validation warnings
 - Fully offline browser app
@@ -42,7 +44,8 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 
 - Material presets with density, swell and settling values
 - Save, load and name jobs
-- Material delivery, travel and fuel estimates
+- Uneven fill areas and multiple material entries
+- Travel and fuel estimates
 - Offline native apps for Windows, Linux and Android
 - Shared job list for Docker users on the same LAN
 - Docker container and native packaging
