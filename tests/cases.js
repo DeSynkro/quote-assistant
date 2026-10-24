@@ -154,6 +154,113 @@
           closeTo(result.volume, 0, "volume");
         },
       },
+      {
+        name: "applies swell to loose volume",
+        run() {
+          closeTo(Calc.applySwell(8, true, 30), 10.4, "swollen volume");
+        },
+      },
+      {
+        name: "leaves volume unchanged when swell is disabled",
+        run() {
+          closeTo(Calc.applySwell(8, false, 30), 8, "volume");
+        },
+      },
+      {
+        name: "leaves volume unchanged for an invalid swell percent",
+        run() {
+          closeTo(Calc.applySwell(8, true, "bad"), 8, "volume");
+        },
+      },
+      {
+        name: "calculates truck loads by volume",
+        run() {
+          const result = Calc.truckLoads(
+            { volume: 10.4, weight: null },
+            { capacityMode: "both", volumeCapacity: 6.5, weightCapacity: 8 }
+          );
+          closeTo(result.exact, 1.6, "exact trucks");
+          equal(result.rounded, 2, "rounded trucks");
+          equal(result.limit, "volume", "limit");
+          closeTo(result.byVolume, 1.6, "by volume");
+          equal(result.byWeight, null, "by weight");
+        },
+      },
+      {
+        name: "calculates truck loads by weight",
+        run() {
+          const result = Calc.truckLoads(
+            { volume: 10.4, weight: 16 },
+            { capacityMode: "weight", volumeCapacity: 6.5, weightCapacity: 8 }
+          );
+          closeTo(result.exact, 2, "exact trucks");
+          equal(result.limit, "weight", "limit");
+          equal(result.byVolume, null, "by volume");
+          closeTo(result.byWeight, 2, "by weight");
+        },
+      },
+      {
+        name: "uses the weight limit when it is higher",
+        run() {
+          const result = Calc.truckLoads(
+            { volume: 10.4, weight: 16 },
+            { capacityMode: "both", volumeCapacity: 6.5, weightCapacity: 8 }
+          );
+          closeTo(result.exact, 2, "exact trucks");
+          equal(result.limit, "weight", "limit");
+          closeTo(result.byVolume, 1.6, "by volume");
+          closeTo(result.byWeight, 2, "by weight");
+        },
+      },
+      {
+        name: "uses the volume limit when it is higher",
+        run() {
+          const result = Calc.truckLoads(
+            { volume: 10.4, weight: 8 },
+            { capacityMode: "both", volumeCapacity: 6.5, weightCapacity: 8 }
+          );
+          closeTo(result.exact, 1.6, "exact trucks");
+          equal(result.limit, "volume", "limit");
+          closeTo(result.byWeight, 1, "by weight");
+        },
+      },
+      {
+        name: "falls back to volume when weight is unknown",
+        run() {
+          const result = Calc.truckLoads(
+            { volume: 10.4, weight: null },
+            { capacityMode: "both", volumeCapacity: 6.5, weightCapacity: 8 }
+          );
+          closeTo(result.exact, 1.6, "exact trucks");
+          equal(result.limit, "volume", "limit");
+          equal(result.byWeight, null, "by weight");
+        },
+      },
+      {
+        name: "ignores weight in volume-only mode",
+        run() {
+          const result = Calc.truckLoads(
+            { volume: 10.4, weight: 16 },
+            { capacityMode: "volume", volumeCapacity: 6.5, weightCapacity: 8 }
+          );
+          closeTo(result.exact, 1.6, "exact trucks");
+          equal(result.byWeight, null, "by weight");
+        },
+      },
+      {
+        name: "returns zero when truck capacities are missing",
+        run() {
+          const result = Calc.truckLoads(
+            { volume: 10.4, weight: 16 },
+            { capacityMode: "both" }
+          );
+          closeTo(result.exact, 0, "exact trucks");
+          equal(result.rounded, 0, "rounded trucks");
+          equal(result.limit, null, "limit");
+          equal(result.byVolume, null, "by volume");
+          equal(result.byWeight, null, "by weight");
+        },
+      },
     ];
   }
 

@@ -49,6 +49,32 @@
     margin: 0 0 4px;
   }
 
+  h3 {
+    font-size: 15px;
+    margin: 26px 0 4px;
+  }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .check-row input[type="checkbox"] {
+    width: auto;
+    min-height: auto;
+    accent-color: var(--accent);
+  }
+
+  .check-row input[type="number"] {
+    width: 96px;
+  }
+
+  .check-row span {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
   p {
     color: var(--muted);
     margin: 0 0 18px;
@@ -324,6 +350,71 @@
       <div class="result-value" id="sandbox-volume">3 m³</div>
       <div class="result-source" id="sandbox-source">Measured depth</div>
       <div class="formula" id="sandbox-formula">10 m × 3 m × 100 mm = 3 m³</div>
+    </div>
+
+    <h3 class="subhead">Truck load</h3>
+    <p>Uses the volume above and the truck limits. Swell is off by default.</p>
+
+    <div class="fields">
+      <label class="field">
+        <span>Apply swell</span>
+        <span class="check-row">
+          <input id="sandbox-swell-enabled" type="checkbox">
+          <input id="sandbox-swell" type="number" inputmode="decimal" step="any" value="30">
+          <span>%</span>
+        </span>
+      </label>
+      <label class="field">
+        <span>Capacity mode</span>
+        <select id="sandbox-capacity-mode">
+          <option value="both">Volume and weight</option>
+          <option value="volume">Volume only</option>
+          <option value="weight">Weight only</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="fields one">
+      <label class="field">
+        <span>Truck volume capacity</span>
+        <span class="input-row">
+          <input id="sandbox-truck-volume" type="number" inputmode="decimal" step="any" value="6.5">
+          <select aria-label="Truck volume unit">
+            <option>m³</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
+    <div class="fields one">
+      <label class="field">
+        <span>Truck weight capacity</span>
+        <span class="input-row">
+          <input id="sandbox-truck-weight" type="number" inputmode="decimal" step="any" value="8">
+          <select aria-label="Truck weight unit">
+            <option>t</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
+    <div class="fields one">
+      <label class="field">
+        <span>Load weight (optional)</span>
+        <span class="input-row">
+          <input id="sandbox-load-weight" type="number" inputmode="decimal" step="any" placeholder="Leave blank if unknown">
+          <select aria-label="Load weight unit">
+            <option>t</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
+    <div class="result-box" aria-live="polite">
+      <div class="result-label">Truck loads</div>
+      <div class="result-value" id="sandbox-trucks">0 trucks</div>
+      <div class="result-source" id="sandbox-limit">Enter a truck capacity</div>
+      <div class="formula" id="sandbox-truck-formula">No load calculation yet</div>
     </div>
   </section>
 

@@ -18,6 +18,15 @@
   const volumeOutput = document.getElementById("sandbox-volume");
   const sourceOutput = document.getElementById("sandbox-source");
   const formulaOutput = document.getElementById("sandbox-formula");
+  const swellEnabled = document.getElementById("sandbox-swell-enabled");
+  const swellPercent = document.getElementById("sandbox-swell");
+  const capacityMode = document.getElementById("sandbox-capacity-mode");
+  const truckVolume = document.getElementById("sandbox-truck-volume");
+  const truckWeight = document.getElementById("sandbox-truck-weight");
+  const loadWeight = document.getElementById("sandbox-load-weight");
+  const trucksOutput = document.getElementById("sandbox-trucks");
+  const limitOutput = document.getElementById("sandbox-limit");
+  const truckFormulaOutput = document.getElementById("sandbox-truck-formula");
 
   let mode = "measured";
 
@@ -74,9 +83,43 @@
     return `${display(widthInput.value)} ${widthUnit.value} × ${display(lengthInput.value)} ${lengthUnit.value} × ${depth} = ${format(result.volume)} m³`;
   }
 
+  function buildTruckFormula(volume, weight, result) {
+    const parts = [];
+
+    if (result.byVolume !== null) {
+      parts.push(`${format(volume)} m³ ÷ ${display(truckVolume.value)} m³ = ${format(result.byVolume)}`);
+    }
+
+    if (result.byWeight !== null) {
+      parts.push(`${format(weight)} t ÷ ${display(truckWeight.value)} t = ${format(result.byWeight)}`);
+    }
+
+    return parts.length > 0
+      ? parts.join(" · ")
+      : "Add a truck capacity and load details";
+  }
+
   function update() {
     const section = buildSection();
     const result = Calc.sectionVolume(section);
+    const looseVolume = Calc.applySwell(
+      result.volume,
+      swellEnabled.checked,
+      swellPercent.value
+    );
+    const rawWeight = loadWeight.value === "" ? null : Number(loadWeight.value);
+    const weight = Number.isFinite(rawWeight) && rawWeight > 0 ? rawWeight : null;
+    const truckResult = Calc.truckLoads(
+      { volume: looseVolume, weight },
+      {
+        capacityMode: capacityMode.value,
+        volumeCapacity: truckVolume.value,
+        weightCapacity: truckWeight.value,
+      }
+    );
+    const roundedText = truckResult.rounded !== truckResult.exact
+      ? ` (${truckResult.rounded} rounded)`
+      : "";
 
     volumeOutput.textContent = `${format(result.volume)} m³`;
     sourceOutput.textContent = result.source === "measured"
@@ -85,6 +128,14 @@
         ? "Assumed depth"
         : "Manual volume";
     formulaOutput.textContent = buildFormula(section, result);
+
+    trucksOutput.textContent = `${format(truckResult.exact)} trucks${roundedText}`;
+    limitOutput.textContent = truckResult.limit === "volume"
+      ? "Limited by volume"
+      : truckResult.limit === "weight"
+        ? "Limited by weight"
+        : "Enter a truck capacity";
+    truckFormulaOutput.textContent = buildTruckFormula(looseVolume, weight, truckResult);
   }
 
   function setMode(nextMode) {
@@ -108,13 +159,25 @@
     button.addEventListener("click", () => setMode(button.dataset.mode));
   }
 
-  for (const input of [widthInput, lengthInput, depthInput, assumedInput, manualInput]) {
+  for (const input of [
+    widthInput,
+    lengthInput,
+    depthInput,
+    assumedInput,
+    manualInput,
+    swellPercent,
+    truckVolume,
+    truckWeight,
+    loadWeight,
+  ]) {
     input.addEventListener("input", update);
   }
 
-  for (const select of [widthUnit, lengthUnit, depthUnit, assumedUnit]) {
+  for (const select of [widthUnit, lengthUnit, depthUnit, assumedUnit, capacityMode]) {
     select.addEventListener("change", update);
   }
+
+  swellEnabled.addEventListener("change", update);
 
   setMode("measured");
 })();
