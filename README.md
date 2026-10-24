@@ -22,26 +22,30 @@ The native apps work fully offline. The optional Docker version shares one job l
 
 ## Status
 
-Planning and the UI mockup are complete. Application code has not started.
+The calculation engine and estimator UI are working. Open `app/index.html` directly in a browser to use it.
 
+- App: [app/index.html](app/index.html)
 - Planning notes: [Project.md](Project.md)
 - UI mockup: [mockups/quote-assistant-ui.html](mockups/quote-assistant-ui.html)
 - Calculation tests and sandbox: [tests/tests.html](tests/tests.html)
 
-Open the mockup or the test page directly in a browser.
+## Working now
 
-## Planned features
-
-- Multiple job sections with rectangle, uneven-end, manual-area and manual-volume modes
+- Rectangle, uneven ends, manual area and manual volume sections
 - Area, volume and formula shown for each section
 - Truck limits by volume, weight, or both
-- Material presets with swell and settling allowances
-- Spoil removal and material delivery calculations
-- Optional travel and fuel estimate
+- Swell, price rounding and GST
+- Live estimate, totals and validation warnings
+- Fully offline browser app
+
+## Still planned
+
+- Material presets with density, swell and settling values
 - Save, load and name jobs
-- Offline native apps with local job storage
+- Material delivery, travel and fuel estimates
+- Offline native apps for Windows, Linux and Android
 - Shared job list for Docker users on the same LAN
-- Builds for Windows, Linux, Android and Docker
+- Docker container and native packaging
 
 ## Planned stack
 
@@ -52,17 +56,18 @@ Open the mockup or the test page directly in a browser.
 | Native storage | Pretty-printed JSON in the OS app data folder |
 | Docker server | Node built-in modules, no npm |
 | Docker storage | JSON files in `docker/data/jobs/` |
-| Testing | `tests/tests.html` and Node's built-in test runner |
+| Testing | `tests/tests.html` and `node tests/run-tests.js` |
 
 ## How it runs
 
-- **Native apps:** fully offline. Jobs are saved locally in the OS app data folder.
-- **Docker:** serves the same app over the local network. Jobs are stored in the Docker data folder and shared by all LAN users.
+- **Browser app:** open `app/index.html`. It works fully offline.
+- **Native apps (planned):** fully offline. Jobs will be saved locally in the OS app data folder.
+- **Docker (planned):** serves the same app over the local network. Jobs will be stored in the Docker data folder and shared by all LAN users.
 - **No cloud:** there are no accounts, no external services and no internet dependency.
 
 ## Privacy
 
-Native builds are fully offline. The Docker build is intended for a trusted local network.
+The browser app and planned native builds run fully offline. The planned Docker build is intended for a trusted local network.
 
 - No telemetry, analytics or accounts
 - No external network requests from the app
@@ -72,8 +77,10 @@ Native builds are fully offline. The Docker build is intended for a trusted loca
 
 ## Project documents
 
+- [Estimator app](app/index.html)
 - [Planning notes](Project.md)
 - [UI mockup](mockups/quote-assistant-ui.html)
+- [Calculation tests and sandbox](tests/tests.html)
 
 ## License
 

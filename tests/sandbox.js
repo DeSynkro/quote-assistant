@@ -61,7 +61,9 @@
     if (!Number.isFinite(number)) {
       return "$0";
     }
+    const hasCents = Math.abs(number - Math.round(number)) > 1e-9;
     return `$${new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: hasCents ? 2 : 0,
       maximumFractionDigits: 2,
     }).format(number)}`;
   }

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quote Assistant</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div>
+      <h1>Quote Assistant</h1>
+      <div class="subtitle">Offline estimating for earthmoving jobs</div>
+    </div>
+    <div class="header-actions">
+      <span class="pill green">Offline · local only</span>
+      <button class="btn" id="new-job" type="button">New job</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="main-column">
+      <div class="card">
+        <h2>Truck</h2>
+
+        <div class="segmented" id="capacity-mode" role="group" aria-label="Truck capacity mode">
+          <button type="button" data-mode="volume">Volume</button>
+          <button type="button" data-mode="weight">Weight</button>
+          <button type="button" data-mode="both">Both</button>
+        </div>
+
+        <div class="grid-3">
+          <label class="field">
+            <span>Volume capacity</span>
+            <span class="with-unit">
+              <input id="truck-volume" type="number" inputmode="decimal" step="any" value="6.5">
+              <span class="unit">m³</span>
+            </span>
+          </label>
+          <label class="field">
+            <span>Weight capacity</span>
+            <span class="with-unit">
+              <input id="truck-weight" type="number" inputmode="decimal" step="any" value="8">
+              <span class="unit">t</span>
+            </span>
+          </label>
+          <label class="field">
+            <span>Price per truck</span>
+            <span class="with-unit">
+              <input id="truck-price" type="number" inputmode="decimal" step="any" value="800">
+              <span class="unit">$</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="footnote">Both limits are checked when both capacities are present. Weight needs a material density.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Job sections</h2>
+          <span class="pill" id="section-count">1 section</span>
+        </div>
+        <div id="sections"></div>
+        <button class="add-btn" id="add-section" type="button">+ Add section</button>
+      </div>
+
+      <div class="card">
+        <h2>Assumptions</h2>
+
+        <div class="switch-row">
+          <div>
+            <div class="label">Apply swell (material expansion)</div>
+            <div class="hint">Digging loosens material, so it takes more truck space.</div>
+          </div>
+          <div class="inline-fields">
+            <input id="swell-enabled" type="checkbox" class="switch" aria-label="Apply swell">
+            <input id="swell-percent" type="number" inputmode="decimal" step="any" value="30" aria-label="Swell percent">
+            <span class="muted small">%</span>
+          </div>
+        </div>
+
+        <div class="switch-row">
+          <div>
+            <div class="label">Round up trucks and prices</div>
+            <div class="hint">Shows the exact decimal and the rounded totals.</div>
+          </div>
+          <input id="round-up" type="checkbox" class="switch" checked aria-label="Round up trucks and prices">
+        </div>
+
+        <div class="switch-row">
+          <div>
+            <div class="label">GST</div>
+            <div class="hint">No GST by default.</div>
+          </div>
+          <select id="gst-mode" aria-label="GST mode">
+            <option value="none">No GST</option>
+            <option value="add">Add GST</option>
+            <option value="included">GST included</option>
+          </select>
+        </div>
+
+        <div class="switch-row">
+          <div>
+            <div class="label">GST rate</div>
+            <div class="hint">Used when GST is added or included.</div>
+          </div>
+          <div class="inline-fields">
+            <input id="gst-rate" type="number" inputmode="decimal" step="any" value="10" aria-label="GST rate">
+            <span class="muted small">%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="results" aria-label="Estimate" aria-live="polite">
+      <h2>Estimate</h2>
+
+      <div class="result-row">
+        <div class="result-label">Spoil to remove</div>
+        <div class="result-value" id="result-volume">0 m³</div>
+        <div class="result-sub" id="result-volume-sub">0 m³ loose</div>
+      </div>
+
+      <div class="result-row">
+        <div class="result-label">Truck loads</div>
+        <div class="result-value" id="result-trucks">0 trucks</div>
+        <div class="result-sub" id="result-limit"></div>
+      </div>
+
+      <div class="result-row">
+        <div class="result-label">Estimated charge</div>
+        <div class="result-value money" id="result-price">$0</div>
+        <div class="result-sub" id="result-price-sub"></div>
+      </div>
+
+      <div class="summary" id="summary">Add job dimensions to see an estimate.</div>
+      <div class="warnings" id="warnings" hidden></div>
+
+      <details>
+        <summary>Show the maths</summary>
+        <div class="maths" id="maths"></div>
+      </details>
+
+      <div class="notice">
+        <span class="dot"></span>
+        <span>All calculations stay on this device. No data is sent anywhere.</span>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="calc.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

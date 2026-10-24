@@ -4,7 +4,15 @@ A local-first, privacy-first estimator for earthmoving quotes. Native builds run
 fully offline; the Docker build stays on the local network. Used internally on the
 spot while measuring a job; the customer never sees the output.
 
-UI mockup for review: [`mockups/quote-assistant-ui.html`](mockups/quote-assistant-ui.html)
+UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-assistant-ui.html)
+
+## Current Implementation
+- Working estimator: `app/index.html`.
+- Calculation engine: `app/calc.js`.
+- Manual test sandbox: `tests/tests.html`.
+- Terminal tests: `node tests/run-tests.js`.
+- Working: section shapes, swell, truck loads, price, rounding, GST, warnings and the browser UI.
+- Not yet built: material presets, save and load, delivery, fuel, native packaging and Docker sharing.
 
 ---
 
