@@ -380,6 +380,17 @@
 
         <div class="footnote">Round trip doubles the distance. Fuel cost = total km ÷ fuel consumption × diesel price. Price per km cost = total km × price per km.</div>
       </div>
+
+      <div class="card">
+        <h2>Data</h2>
+        <p class="small muted">Back up saved jobs and truck presets, or move them to another device. Import merges with existing data.</p>
+        <div class="data-actions">
+          <button class="btn" id="export-data" type="button">Export data</button>
+          <button class="btn" id="import-data" type="button">Import data</button>
+          <input id="import-file" type="file" accept=".json,application/json" hidden>
+        </div>
+        <div class="small muted" id="data-status"></div>
+      </div>
     </section>
 
     <aside class="results" aria-label="Estimate" aria-live="polite">
@@ -450,6 +461,7 @@
 
 <script src="calc.js"></script>
 <script src="storage.js"></script>
+<script src="backup.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

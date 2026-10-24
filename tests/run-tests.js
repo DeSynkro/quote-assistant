@@ -2,10 +2,16 @@
 
 const Calc = require("../app/calc.js");
 const QuoteStorage = require("../app/storage.js");
+const Backup = require("../app/backup.js");
 const { createCases } = require("./cases.js");
 const { createCases: createStorageCases } = require("./storage-cases.js");
+const { createCases: createBackupCases } = require("./backup-cases.js");
 
-const cases = [...createCases(Calc), ...createStorageCases(QuoteStorage)];
+const cases = [
+  ...createCases(Calc),
+  ...createStorageCases(QuoteStorage),
+  ...createBackupCases(Backup),
+];
 let failed = 0;
 
 for (const test of cases) {

@@ -43,13 +43,13 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 - Travel and fuel with round trips, truck fuel consumption, price per km and diesel price
 - Save, load and delete jobs locally
 - Automatic timestamp names when a job is unnamed
+- Export and import jobs and truck presets as JSON
 - Live estimate, totals and validation warnings
 - Fully offline browser app
 
 ## Still planned
 
 - Material presets with density, swell and settling values
-- Export and import saved jobs and truck presets
 - Uneven fill areas and multiple material entries
 - Offline native apps for Windows, Linux and Android
 - Shared job list for Docker users on the same LAN

@@ -11,7 +11,7 @@ UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-
 - Calculation engine: `app/calc.js`.
 - Manual test sandbox: `tests/tests.html`.
 - Terminal tests: `node tests/run-tests.js`.
-- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, travel and fuel, job save/load, combined totals, warnings and the browser UI.
+- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, travel and fuel, job save/load, data export/import, combined totals, warnings and the browser UI.
 - Not yet built: material presets, uneven fill areas, multiple materials, native packaging and Docker sharing.
 
 ---
@@ -212,6 +212,19 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   backends are planned, along with export/import to move jobs between them.
 - No cloud, no internet sync and no accounts.
 
+### Backup and transfer (implemented)
+- Export all saved jobs and truck presets to a JSON backup file.
+- The export includes the job inputs and summaries, not just the calculated
+  totals.
+- Import merges with existing data.
+- Truck presets match by ID first, then by name.
+- Jobs match by ID.
+- Import shows how many jobs and presets were imported and warns if the browser
+  could not save them.
+- The JSON backup is the intended way to move data from the browser build into
+  Docker or native builds later.
+- No network connection is used.
+
 ### Data and sharing (planned for native and Docker)
 - The current browser build stores jobs in localStorage.
 - Native and Docker job lists are separate in v1. There is no automatic sync
@@ -263,7 +276,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - `tests/tests.html` opens by double-click and includes a manual sandbox for
   trying measurements, plus pass or fail results for the calculation functions.
 - The same checks run in the terminal with `node tests/run-tests.js`, together
-  with the truck preset storage tests.
+  with the truck preset, job storage and backup tests.
 - The Docker server gets a small test script using Node's built-in test runner,
   with no packages.
 - Manual smoke checks cover the browser app, the Docker LAN app and the Tauri
@@ -287,7 +300,6 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - **Autosave the current job** locally so an accidental close doesn't lose it.
 - **Job search / filter** once there are many saved jobs; show recent jobs on the
   start-up screen.
-- **JSON export/import** for manual backup and moving between devices offline.
 - **Copy summary** to clipboard (text only) for pasting into a note or message.
 - **Price rounding display** option: nearest $1 / $5 / $10.
 - **Validation and warnings**: zero/negative dimensions, weight over capacity,

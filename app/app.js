@@ -12,6 +12,10 @@
   const loadJobsPanel = document.getElementById("load-jobs-panel");
   const closeLoadJobsButton = document.getElementById("close-load-jobs");
   const savedJobsList = document.getElementById("saved-jobs-list");
+  const exportDataButton = document.getElementById("export-data");
+  const importDataButton = document.getElementById("import-data");
+  const importFileInput = document.getElementById("import-file");
+  const dataStatusOutput = document.getElementById("data-status");
   const truckVolumeInput = document.getElementById("truck-volume");
   const truckWeightInput = document.getElementById("truck-weight");
   const truckPriceInput = document.getElementById("truck-price");
@@ -1368,6 +1372,89 @@
     setJobStatus("Unsaved job");
   }
 
+  function setDataStatus(text, warn) {
+    dataStatusOutput.textContent = text || "";
+    dataStatusOutput.classList.toggle("warn", Boolean(warn));
+  }
+
+  function countLabel(count, singular, plural) {
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
+
+  function exportData() {
+    if (typeof Backup === "undefined") {
+      setDataStatus("Backup support is unavailable.", true);
+      return;
+    }
+
+    const backup = Backup.createBackup({
+      presets: truckPresets,
+      jobs: savedJobs,
+    });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    link.href = url;
+    link.download = `quote-assistant-backup-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setDataStatus(`Exported ${countLabel(savedJobs.length, "job", "jobs")} and ${countLabel(truckPresets.length, "preset", "presets")}.`);
+  }
+
+  async function importDataFile(file) {
+    if (typeof Backup === "undefined") {
+      setDataStatus("Backup support is unavailable.", true);
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const parsed = Backup.parseBackup(text);
+      const mergedPresets = Backup.mergePresets(truckPresets, parsed.presets);
+      const mergedJobs = Backup.mergeJobs(savedJobs, parsed.jobs);
+      const presetsSaved = truckStore.save({
+        presets: mergedPresets,
+        selectedId: selectedTruckPresetId,
+      });
+      const jobsSaved = jobStore.save({ jobs: mergedJobs });
+
+      truckPresets = mergedPresets;
+      savedJobs = mergedJobs;
+
+      if (selectedTruckPresetId && parsed.presets.length > 0) {
+        truckDirty = true;
+      }
+
+      renderTruckPresetOptions();
+      updateTruckPresetStatus();
+
+      if (!loadJobsPanel.hidden) {
+        renderSavedJobs();
+      }
+
+      if (parsed.jobs.length === 0 && parsed.presets.length === 0) {
+        setDataStatus("No jobs or presets found in that file.", true);
+      } else if (!presetsSaved || !jobsSaved) {
+        setDataStatus(
+          `Imported ${countLabel(parsed.jobs.length, "job", "jobs")} and ${countLabel(parsed.presets.length, "preset", "presets")}, but could not save everything in this browser.`,
+          true
+        );
+      } else {
+        setDataStatus(`Imported ${countLabel(parsed.jobs.length, "job", "jobs")} and ${countLabel(parsed.presets.length, "preset", "presets")}.`);
+      }
+    } catch (error) {
+      setDataStatus(error.message || "Could not import that file.", true);
+    }
+  }
+
   function syncDeliveryControls() {
     deliveryEnabledInput.checked = state.delivery.enabled;
     deliveryCard.hidden = !state.delivery.enabled;
@@ -1668,6 +1755,18 @@
   sectionsEl.addEventListener("input", handleSectionInput);
   sectionsEl.addEventListener("change", handleSectionInput);
   sectionsEl.addEventListener("click", handleSectionAction);
+
+  exportDataButton.addEventListener("click", exportData);
+  importDataButton.addEventListener("click", () => importFileInput.click());
+  importFileInput.addEventListener("change", async () => {
+    const file = importFileInput.files[0];
+    if (!file) {
+      return;
+    }
+
+    await importDataFile(file);
+    importFileInput.value = "";
+  });
 
   saveJobButton.addEventListener("click", saveJob);
   loadJobsButton.addEventListener("click", openLoadJobs);

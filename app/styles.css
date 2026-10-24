@@ -230,6 +230,21 @@ h1 {
   font-size: 13px;
 }
 
+.data-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+#data-status {
+  min-height: 16px;
+}
+
+#data-status.warn {
+  color: var(--warn);
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
