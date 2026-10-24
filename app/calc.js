@@ -168,6 +168,109 @@
     return { total: value, gst };
   }
 
+  function calculateTravel(travel, context) {
+    const source = travel || {};
+    const trips = context || {};
+    const warnings = [];
+    const distance = Number(source.distance);
+    const distanceValid = Number.isFinite(distance) && distance > 0;
+    const roundTrip = source.roundTrip !== false;
+    const totalDistance = distanceValid ? distance * (roundTrip ? 2 : 1) : 0;
+    const useCalculatedTrips = source.useCalculatedTrips !== false;
+    const rawTrips = useCalculatedTrips
+      ? Number(trips.tripsRounded)
+      : Number(source.manualTrips);
+    const wholeTrips = Number.isFinite(rawTrips) && rawTrips > 0
+      ? Math.ceil(rawTrips)
+      : 0;
+    const tripsExact = wholeTrips;
+    const tripsRounded = wholeTrips;
+    const totalKm = totalDistance * wholeTrips;
+    const usePricePerKm = source.usePricePerKm === true;
+    const pricePerKm = positiveNumber(source.pricePerKm);
+    const useTruckFuel = source.useTruckFuel !== false;
+    const fuelValue = useTruckFuel ? trips.truckFuelConsumption : source.manualFuel;
+    const fuelConsumption = usePricePerKm ? null : positiveNumber(fuelValue);
+    const includeDieselPrice = usePricePerKm ? false : source.includeDieselPrice !== false;
+    const dieselPrice = usePricePerKm ? null : positiveNumber(source.dieselPrice);
+
+    if (!distanceValid) {
+      warnings.push({
+        code: "travel-missing-distance",
+        message: "Enter the travel distance.",
+      });
+    }
+
+    if (tripsExact <= 0) {
+      warnings.push({
+        code: "travel-missing-trips",
+        message: "Enter the number of truck trips.",
+      });
+    }
+
+    if (usePricePerKm) {
+      if (pricePerKm === null) {
+        warnings.push({
+          code: "travel-missing-price-per-km",
+          message: "Enter the price per kilometre.",
+        });
+      }
+    } else {
+      if (fuelConsumption === null) {
+        warnings.push({
+          code: "travel-missing-fuel",
+          message: "Enter fuel consumption in km/L.",
+        });
+      }
+
+      if (includeDieselPrice && dieselPrice === null) {
+        warnings.push({
+          code: "travel-missing-diesel",
+          message: "Enter the current diesel price.",
+        });
+      }
+    }
+
+    let litresExact = 0;
+    let litresRounded = 0;
+    let costExact = 0;
+    let costRounded = 0;
+
+    if (usePricePerKm) {
+      costExact = pricePerKm !== null ? totalKm * pricePerKm : 0;
+      costRounded = costExact;
+    } else if (fuelConsumption !== null) {
+      litresExact = totalKm / fuelConsumption;
+      litresRounded = litresExact;
+      if (includeDieselPrice && dieselPrice !== null) {
+        costExact = litresExact * dieselPrice;
+        costRounded = litresRounded * dieselPrice;
+      }
+    }
+
+    return {
+      enabled: true,
+      distance: distanceValid ? distance : 0,
+      roundTrip,
+      totalDistance,
+      totalKm,
+      tripsExact,
+      tripsRounded,
+      usePricePerKm,
+      pricePerKm: usePricePerKm ? pricePerKm : null,
+      fuelConsumption,
+      dieselPrice: includeDieselPrice ? dieselPrice : null,
+      includeDieselPrice,
+      litresExact,
+      litresRounded,
+      cost: {
+        exact: costExact,
+        rounded: costRounded,
+      },
+      warnings,
+    };
+  }
+
   function calculateDelivery(delivery, truck, pricePerTruck) {
     const source = delivery || {};
     const spec = truck || {};
@@ -461,8 +564,24 @@
       warnings.push(...delivery.warnings);
     }
 
-    const combinedPriceExact = price.exact + (delivery ? delivery.total.exact : 0);
-    const combinedPriceRounded = price.rounded + (delivery ? delivery.total.rounded : 0);
+    const travel = source.travel && source.travel.enabled
+      ? calculateTravel(source.travel, {
+        tripsExact: loads.exact + (delivery ? delivery.trucks.exact : 0),
+        tripsRounded: loads.rounded + (delivery ? delivery.trucks.rounded : 0),
+        truckFuelConsumption: truck.fuelConsumption,
+      })
+      : null;
+
+    if (travel) {
+      warnings.push(...travel.warnings);
+    }
+
+    const combinedPriceExact = price.exact
+      + (delivery ? delivery.total.exact : 0)
+      + (travel ? travel.cost.exact : 0);
+    const combinedPriceRounded = price.rounded
+      + (delivery ? delivery.total.rounded : 0)
+      + (travel ? travel.cost.rounded : 0);
     const combinedGstExact = applyGst(combinedPriceExact, gst.mode, gst.rate);
     const combinedGstRounded = applyGst(combinedPriceRounded, gst.mode, gst.rate);
 
@@ -479,6 +598,7 @@
           rounded: gstRounded,
         },
         delivery,
+        travel,
         combined: {
           trucks: {
             exact: loads.exact + (delivery ? delivery.trucks.exact : 0),
@@ -508,6 +628,7 @@
     calculatePrice,
     applyGst,
     calculateDelivery,
+    calculateTravel,
     calculateJob,
   };
 });

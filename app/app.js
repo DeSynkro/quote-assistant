@@ -50,6 +50,21 @@
   const combinedRow = document.getElementById("result-combined-row");
   const combinedTrucksOutput = document.getElementById("result-combined-trucks");
   const combinedSubOutput = document.getElementById("result-combined-sub");
+  const travelEnabledInput = document.getElementById("travel-enabled");
+  const travelCard = document.getElementById("travel-card");
+  const travelManualTripsField = document.getElementById("travel-manual-trips-field");
+  const travelManualFuelField = document.getElementById("travel-manual-fuel-field");
+  const travelDieselField = document.getElementById("travel-diesel-field");
+  const travelDieselInput = document.getElementById("travel-diesel");
+  const travelFuelFields = document.getElementById("travel-fuel-fields");
+  const travelPricePerKmField = document.getElementById("travel-price-km-field");
+  const travelPricePerKmInput = document.getElementById("travel-price-km");
+  const travelPriceNote = document.getElementById("travel-price-note");
+  const travelTripsNote = document.getElementById("travel-trips-note");
+  const travelFuelNote = document.getElementById("travel-fuel-note");
+  const travelRow = document.getElementById("result-travel-row");
+  const travelCostOutput = document.getElementById("result-travel-cost");
+  const travelSubOutput = document.getElementById("result-travel-sub");
 
   let nextSectionId = 1;
 
@@ -73,6 +88,22 @@
       depth: "",
       depthUnit: "mm",
     }, overrides);
+  }
+
+  function createTravel() {
+    return {
+      enabled: false,
+      distance: "",
+      useCalculatedTrips: true,
+      manualTrips: "",
+      roundTrip: true,
+      usePricePerKm: false,
+      pricePerKm: "",
+      useTruckFuel: true,
+      manualFuel: "",
+      includeDieselPrice: true,
+      dieselPrice: "",
+    };
   }
 
   function createDelivery() {
@@ -123,6 +154,7 @@
       rate: "10",
     },
     delivery: createDelivery(),
+    travel: createTravel(),
     showRounded: true,
   };
 
@@ -417,6 +449,21 @@
           customFee: state.delivery.customFee,
         }
         : { enabled: false },
+      travel: state.travel.enabled
+        ? {
+          enabled: true,
+          distance: state.travel.distance,
+          useCalculatedTrips: state.travel.useCalculatedTrips,
+          manualTrips: state.travel.manualTrips,
+          roundTrip: state.travel.roundTrip,
+          usePricePerKm: state.travel.usePricePerKm,
+          pricePerKm: state.travel.pricePerKm,
+          useTruckFuel: state.travel.useTruckFuel,
+          manualFuel: state.travel.manualFuel,
+          includeDieselPrice: state.travel.includeDieselPrice,
+          dieselPrice: state.travel.dieselPrice,
+        }
+        : { enabled: false },
     };
   }
 
@@ -494,6 +541,10 @@
     return Number(value) === 1 ? "truck" : "trucks";
   }
 
+  function tripWord(value) {
+    return Number(value) === 1 ? "trip" : "trips";
+  }
+
   function truckValueText(trucks, showRounded) {
     const value = showRounded ? trucks.rounded : trucks.exact;
     return `${format(value)} ${truckWord(value)}`;
@@ -535,10 +586,102 @@
     return delivery.deliveredVolume !== null || delivery.weight !== null;
   }
 
+  function travelSummaryText(travel, showRounded) {
+    if (!travel) {
+      return "";
+    }
+
+    if (travel.usePricePerKm) {
+      const cost = showRounded ? travel.cost.rounded : travel.cost.exact;
+      return cost > 0 ? `Travel adds ${money(cost)}. ` : "";
+    }
+
+    if (!travel.includeDieselPrice) {
+      const litres = showRounded ? travel.litresRounded : travel.litresExact;
+      return litres > 0
+        ? `Fuel ${format(litres)} L, diesel price excluded. `
+        : "";
+    }
+
+    const cost = showRounded ? travel.cost.rounded : travel.cost.exact;
+    return cost > 0 ? `Travel adds ${money(cost)}. ` : "";
+  }
+
+  function updateTravelNotes(result) {
+    if (!state.travel.enabled) {
+      return;
+    }
+
+    const trips = result.totals.combined.trucks;
+
+    if (state.travel.useCalculatedTrips) {
+      const whole = trips.rounded;
+
+      if (whole > 0) {
+        travelTripsNote.textContent = `Using ${format(whole)} job ${tripWord(whole)}.`;
+        travelTripsNote.classList.remove("warn");
+      } else {
+        travelTripsNote.textContent = "No job trips to travel.";
+        travelTripsNote.classList.add("warn");
+      }
+    } else {
+      const manual = Number(state.travel.manualTrips);
+      const whole = Number.isFinite(manual) && manual > 0 ? Math.ceil(manual) : 0;
+
+      if (whole > 0) {
+        travelTripsNote.textContent = `Using ${format(whole)} manual ${tripWord(whole)}.`;
+        travelTripsNote.classList.remove("warn");
+      } else {
+        travelTripsNote.textContent = "Enter the number of manual trips.";
+        travelTripsNote.classList.add("warn");
+      }
+    }
+
+    if (state.travel.usePricePerKm) {
+      const price = Number(state.travel.pricePerKm);
+
+      if (Number.isFinite(price) && price > 0) {
+        travelPriceNote.textContent = `Using price per km: ${money(price)}/km.`;
+        travelPriceNote.classList.remove("warn");
+      } else {
+        travelPriceNote.textContent = "Enter the price per km.";
+        travelPriceNote.classList.add("warn");
+      }
+
+      travelFuelNote.textContent = "";
+      travelFuelNote.classList.remove("warn");
+    } else {
+      travelPriceNote.textContent = "";
+      travelPriceNote.classList.remove("warn");
+
+      if (state.travel.useTruckFuel) {
+        const fuel = Number(state.truck.fuelConsumption);
+        if (Number.isFinite(fuel) && fuel > 0) {
+          travelFuelNote.textContent = `Using truck preset: ${format(fuel)} km/L.`;
+          travelFuelNote.classList.remove("warn");
+        } else {
+          travelFuelNote.textContent = "The truck has no fuel consumption. Enter one in the truck or use a manual value.";
+          travelFuelNote.classList.add("warn");
+        }
+      } else {
+        const manual = Number(state.travel.manualFuel);
+        if (Number.isFinite(manual) && manual > 0) {
+          travelFuelNote.textContent = `Using manual fuel consumption: ${format(manual)} km/L.`;
+          travelFuelNote.classList.remove("warn");
+        } else {
+          travelFuelNote.textContent = "Enter manual fuel consumption.";
+          travelFuelNote.classList.add("warn");
+        }
+      }
+    }
+  }
+
   function updateMaths(result) {
     const totals = result.totals;
     const delivery = totals.delivery;
-    const finalGst = delivery ? totals.combined.gst : totals.gst;
+    const travel = totals.travel;
+    const hasExtras = Boolean(delivery || travel);
+    const finalGst = hasExtras ? totals.combined.gst : totals.gst;
     mathsOutput.innerHTML = "";
 
     if (result.sections.length === 0) {
@@ -580,6 +723,27 @@
       appendMathRow(`Delivery trucks: ${format(delivery.trucks.exact)} exact · ${delivery.trucks.rounded} rounded`);
       appendMathRow(`Delivery trips: ${money(delivery.tripCost.exact)} exact · ${money(delivery.tripCost.rounded)} rounded`);
       appendMathRow(`Delivery total: ${money(delivery.total.exact)} exact · ${money(delivery.total.rounded)} rounded`);
+    }
+
+    if (travel) {
+      appendMathRow(`Travel: ${format(travel.distance)} km ${travel.roundTrip ? "× 2" : "one way"} × ${travel.tripsRounded} ${tripWord(travel.tripsRounded)} = ${format(travel.totalKm)} km`);
+
+      if (travel.usePricePerKm) {
+        appendMathRow(`Price per km: ${travel.pricePerKm !== null ? `${money(travel.pricePerKm)}/km` : "not set"}`);
+        appendMathRow(`Travel cost: ${money(travel.cost.rounded)}`);
+      } else {
+        appendMathRow(`Fuel consumption: ${travel.fuelConsumption !== null ? `${format(travel.fuelConsumption)} km/L` : "not set"}`);
+        appendMathRow(`Fuel: ${format(travel.litresRounded)} L`);
+
+        if (travel.includeDieselPrice) {
+          appendMathRow(`Fuel cost: ${money(travel.cost.rounded)}`);
+        } else {
+          appendMathRow("Diesel price excluded.");
+        }
+      }
+    }
+
+    if (hasExtras) {
       appendMathRow(`Combined trucks: ${format(totals.combined.trucks.exact)} exact · ${totals.combined.trucks.rounded} rounded`);
       appendMathRow(`Combined price: ${money(totals.combined.price.exact)} exact · ${money(totals.combined.price.rounded)} rounded`);
     }
@@ -594,10 +758,12 @@
   function updateResults(result) {
     const totals = result.totals;
     const delivery = totals.delivery;
+    const travel = totals.travel;
     const combined = totals.combined;
     const showRounded = state.showRounded;
-    const finalTrucks = delivery ? combined.trucks : totals.trucks;
-    const finalGst = delivery ? combined.gst : totals.gst;
+    const hasExtras = Boolean(delivery || travel);
+    const finalTrucks = hasExtras ? combined.trucks : totals.trucks;
+    const finalGst = hasExtras ? combined.gst : totals.gst;
 
     volumeOutput.textContent = `${format(totals.volumeInGround)} m³`;
 
@@ -622,6 +788,20 @@
 
     materialRow.hidden = !delivery;
     combinedRow.hidden = !delivery;
+    travelRow.hidden = !travel;
+
+    if (travel) {
+      if (travel.usePricePerKm) {
+        travelCostOutput.textContent = money(showRounded ? travel.cost.rounded : travel.cost.exact);
+        travelSubOutput.textContent = `${format(travel.totalKm)} km · ${travel.tripsRounded} ${tripWord(travel.tripsRounded)} · ${money(travel.pricePerKm)}/km`;
+      } else if (travel.includeDieselPrice) {
+        travelCostOutput.textContent = money(showRounded ? travel.cost.rounded : travel.cost.exact);
+        travelSubOutput.textContent = `${format(showRounded ? travel.litresRounded : travel.litresExact)} L · ${format(travel.totalKm)} km · ${travel.tripsRounded} ${tripWord(travel.tripsRounded)}`;
+      } else {
+        travelCostOutput.textContent = `${format(showRounded ? travel.litresRounded : travel.litresExact)} L`;
+        travelSubOutput.textContent = `Diesel price excluded · ${format(travel.totalKm)} km · ${travel.tripsRounded} ${tripWord(travel.tripsRounded)}`;
+      }
+    }
 
     if (delivery) {
       materialLabel.textContent = delivery.materialName
@@ -653,7 +833,7 @@
 
       combinedTrucksOutput.textContent = truckValueText(combined.trucks, showRounded);
 
-      const combinedParts = ["Spoil and delivery trips"];
+      const combinedParts = [travel ? "Spoil, delivery and fuel" : "Spoil and delivery trips"];
       if (showRounded && combined.trucks.rounded !== combined.trucks.exact) {
         combinedParts.push(`${format(combined.trucks.exact)} exact`);
       }
@@ -694,6 +874,7 @@
         }
 
         summary += `Bring in ${materialAmountText(delivery)} of material. `;
+        summary += travelSummaryText(travel, showRounded);
 
         if (finalTrucks.exact > 0) {
           summary += `About ${format(finalTrucks.exact)} ${truckWord(finalTrucks.exact)} there and back`;
@@ -712,12 +893,14 @@
     } else if (totals.trucks.exact <= 0) {
       summaryOutput.textContent = "Add a truck capacity and price to see an estimate.";
     } else {
-      const charge = money(showRounded ? totals.gst.rounded.total : totals.gst.exact.total);
+      const charge = money(showRounded ? finalGst.rounded.total : finalGst.exact.total);
       let summary = `Spoil fits in ${format(totals.trucks.exact)} ${truckWord(totals.trucks.exact)}`;
       if (showRounded && totals.trucks.rounded !== totals.trucks.exact) {
         summary += `, rounded up to ${totals.trucks.rounded}`;
       }
-      summary += `. Estimated charge ${charge}.`;
+      summary += ". ";
+      summary += travelSummaryText(travel, showRounded);
+      summary += `Estimated charge ${charge}.`;
       summaryOutput.textContent = summary;
     }
 
@@ -734,6 +917,7 @@
       }
     }
 
+    updateTravelNotes(result);
     updateMaths(result);
   }
 
@@ -973,6 +1157,27 @@
     deliveryCustomFeeField.hidden = state.delivery.deliveryMode !== "custom";
   }
 
+  function syncTravelControls() {
+    travelEnabledInput.checked = state.travel.enabled;
+    travelCard.hidden = !state.travel.enabled;
+
+    for (const element of travelCard.querySelectorAll("[data-travel-field]")) {
+      const field = element.dataset.travelField;
+      if (element.type === "checkbox") {
+        element.checked = Boolean(state.travel[field]);
+      } else {
+        element.value = state.travel[field] ?? "";
+      }
+    }
+
+    travelManualTripsField.hidden = state.travel.useCalculatedTrips;
+    travelManualFuelField.hidden = state.travel.useTruckFuel;
+    travelDieselField.hidden = !state.travel.includeDieselPrice;
+    travelFuelFields.hidden = state.travel.usePricePerKm;
+    travelPricePerKmField.hidden = !state.travel.usePricePerKm;
+    travelPriceNote.hidden = !state.travel.usePricePerKm;
+  }
+
   function syncStaticControls() {
     truckVolumeInput.value = state.truck.volumeCapacity;
     truckWeightInput.value = state.truck.weightCapacity;
@@ -984,6 +1189,7 @@
     gstModeInput.value = state.gst.mode;
     gstRateInput.value = state.gst.rate;
     syncDeliveryControls();
+    syncTravelControls();
   }
 
   function handleDeliveryInput(event) {
@@ -998,6 +1204,28 @@
 
     if (field === "amountBasis" || field === "deliveryMode") {
       syncDeliveryControls();
+    }
+
+    update();
+  }
+
+  function handleTravelInput(event) {
+    const field = event.target.dataset.travelField;
+    if (!field) {
+      return;
+    }
+
+    state.travel[field] = event.target.type === "checkbox"
+      ? event.target.checked
+      : event.target.value;
+
+    if (
+      field === "useCalculatedTrips"
+      || field === "useTruckFuel"
+      || field === "includeDieselPrice"
+      || field === "usePricePerKm"
+    ) {
+      syncTravelControls();
     }
 
     update();
@@ -1145,6 +1373,45 @@
   deliveryCard.addEventListener("input", handleDeliveryInput);
   deliveryCard.addEventListener("change", handleDeliveryInput);
 
+  travelEnabledInput.addEventListener("change", () => {
+    state.travel.enabled = travelEnabledInput.checked;
+    syncTravelControls();
+    update();
+  });
+
+  travelCard.addEventListener("input", handleTravelInput);
+  travelCard.addEventListener("change", handleTravelInput);
+
+  travelDieselInput.addEventListener("blur", () => {
+    if (state.travel.dieselPrice === "") {
+      return;
+    }
+
+    const value = Number(state.travel.dieselPrice);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    state.travel.dieselPrice = value.toFixed(2);
+    travelDieselInput.value = state.travel.dieselPrice;
+    update();
+  });
+
+  travelPricePerKmInput.addEventListener("blur", () => {
+    if (state.travel.pricePerKm === "") {
+      return;
+    }
+
+    const value = Number(state.travel.pricePerKm);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    state.travel.pricePerKm = value.toFixed(2);
+    travelPricePerKmInput.value = state.travel.pricePerKm;
+    update();
+  });
+
   truckPresetSelect.addEventListener("change", handleTruckPresetChange);
   saveTruckPresetButton.addEventListener("click", openPresetSaveForm);
   deleteTruckPresetButton.addEventListener("click", deleteTruckPreset);
@@ -1183,7 +1450,9 @@
     }
     state.sections = [createSection()];
     state.delivery = createDelivery();
+    state.travel = createTravel();
     syncDeliveryControls();
+    syncTravelControls();
     renderSections();
   });
 

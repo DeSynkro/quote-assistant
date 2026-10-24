@@ -11,8 +11,8 @@ UI mockup (design reference): [`mockups/quote-assistant-ui.html`](mockups/quote-
 - Calculation engine: `app/calc.js`.
 - Manual test sandbox: `tests/tests.html`.
 - Terminal tests: `node tests/run-tests.js`.
-- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, combined totals, warnings and the browser UI.
-- Not yet built: material presets, job save and load, uneven fill areas, multiple materials, travel and fuel, native packaging and Docker sharing.
+- Working: section shapes, swell, truck loads, truck presets, price, rounding, GST, Material In, delivery pricing, travel and fuel, combined totals, warnings and the browser UI.
+- Not yet built: material presets, job save and load, uneven fill areas, multiple materials, native packaging and Docker sharing.
 
 ---
 
@@ -159,13 +159,32 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Area × depth is a rectangle in v1. Use direct volume for irregular fill areas.
 - Multiple materials and uneven fill areas are later additions.
 
-### Travel and fuel (added during discussion)
-- Optional section below Material In, disabled by default.
-- Inputs: distance from the job (one-way km), diesel price ($/L), truck fuel use
-  (L/100 km), and derived round trips.
-- Adds a fuel estimate to the final price using the current distance and diesel
-  price, so the quote reflects today's travel cost.
-- Shown switched on in the mockup to demonstrate the effect.
+### Travel and fuel (implemented)
+- Optional toggle below Material In, disabled by default.
+- Inputs:
+  - Distance from the job in km.
+  - Round trip toggle. When checked, the distance is doubled. When unchecked,
+    the entered distance is used as the total trip distance.
+  - Trips: use the job truck total, or enter a manual trip count.
+  - Cost method: fuel consumption, or price per km.
+  - Fuel mode: fuel consumption in km/L from the truck preset or a manual value,
+    plus an optional diesel price in $/L. The diesel input accepts cents and
+    shows two decimal places. If diesel is excluded, the app shows fuel litres
+    only.
+  - Price-per-km mode: a fixed price per km in dollars. This is useful when the
+    truck's fuel consumption is unknown.
+- The trip count uses combined spoil and delivery trucks.
+- Trip counts are whole numbers. The job truck total and manual trips are both
+  rounded up before calculating travel.
+- Fuel cost = total km ÷ km/L × diesel price.
+- Price-per-km cost = total km × price per km.
+- Travel cost is added to the combined total before GST.
+- Warnings cover missing distance, fuel consumption, diesel price, price per km
+  and trips.
+- The truck preset's fuel consumption is the default for the job, but it can be
+  overridden in the travel section.
+- For multi-stop routes, enter the actual total route distance and turn off the
+  round trip toggle. The app does not model individual stops.
 
 ### Explaining the jargon
 - The UI should not assume the user remembers terms like swell.
@@ -255,9 +274,6 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   with material? Currently they are separate trips.
 - Should fill areas support uneven ends and manual area, or is rectangle plus
   direct volume enough?
-- Fuel estimate: confirm the formula (total trucks × one-way distance × 2 ×
-  fuel use ÷ 100 × diesel price) and the default fuel-use figure, or make it a
-  saved setting.
 
 ## Additional Suggestions (candidate - not committed)
 - **Capacity margin**: a "comfortable fit" factor (default 90-95% of capacity) so

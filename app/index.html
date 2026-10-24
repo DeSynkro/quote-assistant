@@ -83,7 +83,7 @@
           </label>
         </div>
 
-        <div class="footnote">Spoil uses volume capacity. Weight capacity is used for material delivery.</div>
+        <div class="footnote">Spoil uses volume capacity. Weight capacity is used for material delivery. Fuel consumption is used by Travel and Fuel.</div>
       </div>
 
       <div class="card">
@@ -259,6 +259,110 @@
         <div class="footnote">Area × depth uses a rectangle. Use direct volume for irregular fill areas.</div>
         <div class="footnote">Delivery checks the capacity that matches the material amount and uses the same truck capacities. Spoil and delivery trips are calculated separately.</div>
       </div>
+
+      <div class="card">
+        <div class="switch-row" style="border-bottom:none;padding-top:0">
+          <div>
+            <div class="label">Include travel and fuel?</div>
+            <div class="hint">Adds the fuel cost for the truck trips.</div>
+          </div>
+          <input id="travel-enabled" type="checkbox" class="switch" aria-label="Include travel and fuel">
+        </div>
+      </div>
+
+      <div class="card" id="travel-card" hidden>
+        <h2>Travel and fuel</h2>
+
+        <div class="fields one">
+          <label class="field">
+            <span>Distance from job</span>
+            <span class="with-unit">
+              <input id="travel-distance" data-travel-field="distance" type="number" inputmode="decimal" step="any" placeholder="0">
+              <span class="unit">km</span>
+            </span>
+          </label>
+        </div>
+
+        <label class="check-row travel-note">
+          <input id="travel-round-trip" data-travel-field="roundTrip" type="checkbox" checked>
+          <span>Round trip (double the distance)</span>
+        </label>
+
+        <div class="fields">
+          <label class="field">
+            <span>Trips</span>
+            <span class="check-row">
+              <input id="travel-use-trips" data-travel-field="useCalculatedTrips" type="checkbox" checked>
+              <span>Use job truck total</span>
+            </span>
+          </label>
+          <label class="field" id="travel-manual-trips-field" hidden>
+            <span>Manual trips</span>
+            <span class="with-unit">
+              <input id="travel-manual-trips" data-travel-field="manualTrips" type="number" inputmode="decimal" step="1" placeholder="0">
+              <span class="unit">trips</span>
+            </span>
+          </label>
+        </div>
+        <div class="small muted travel-note" id="travel-trips-note"></div>
+
+        <div class="fields">
+          <label class="field">
+            <span>Cost method</span>
+            <span class="check-row">
+              <input id="travel-use-price-km" data-travel-field="usePricePerKm" type="checkbox">
+              <span>Use price per km</span>
+            </span>
+          </label>
+          <label class="field" id="travel-price-km-field" hidden>
+            <span>Price per km</span>
+            <span class="with-unit">
+              <input id="travel-price-km" data-travel-field="pricePerKm" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00">
+              <span class="unit">$ / km</span>
+            </span>
+          </label>
+        </div>
+        <div class="small muted travel-note" id="travel-price-note"></div>
+
+        <div id="travel-fuel-fields">
+        <div class="fields">
+          <label class="field">
+            <span>Fuel consumption</span>
+            <span class="check-row">
+              <input id="travel-use-truck-fuel" data-travel-field="useTruckFuel" type="checkbox" checked>
+              <span>Use truck preset</span>
+            </span>
+          </label>
+          <label class="field" id="travel-manual-fuel-field" hidden>
+            <span>Manual fuel consumption</span>
+            <span class="with-unit">
+              <input id="travel-manual-fuel" data-travel-field="manualFuel" type="number" inputmode="decimal" step="any" placeholder="0">
+              <span class="unit">km/L</span>
+            </span>
+          </label>
+        </div>
+        <div class="small muted travel-note" id="travel-fuel-note"></div>
+
+        <div class="fields">
+          <label class="field">
+            <span>Diesel price</span>
+            <span class="check-row">
+              <input id="travel-include-diesel" data-travel-field="includeDieselPrice" type="checkbox" checked>
+              <span>Include diesel price</span>
+            </span>
+          </label>
+          <label class="field" id="travel-diesel-field">
+            <span>Current diesel price</span>
+            <span class="with-unit">
+              <input id="travel-diesel" data-travel-field="dieselPrice" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00">
+              <span class="unit">$ / L</span>
+            </span>
+          </label>
+        </div>
+        </div>
+
+        <div class="footnote">Round trip doubles the distance. Fuel cost = total km ÷ fuel consumption × diesel price. Price per km cost = total km × price per km.</div>
+      </div>
     </section>
 
     <aside class="results" aria-label="Estimate" aria-live="polite">
@@ -280,6 +384,12 @@
         <div class="result-label" id="result-material-label">Material to bring in</div>
         <div class="result-value" id="result-material-volume">0 m³</div>
         <div class="result-sub" id="result-material-sub"></div>
+      </div>
+
+      <div class="result-row" id="result-travel-row" hidden>
+        <div class="result-label">Travel cost</div>
+        <div class="result-value" id="result-travel-cost">$0</div>
+        <div class="result-sub" id="result-travel-sub"></div>
       </div>
 
       <div class="result-row" id="result-combined-row" hidden>

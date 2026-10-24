@@ -74,6 +74,22 @@
       }, overrides || {});
     }
 
+    function sampleTravel(overrides) {
+      return Object.assign({
+        enabled: true,
+        distance: 20,
+        useCalculatedTrips: true,
+        manualTrips: "",
+        roundTrip: true,
+        usePricePerKm: false,
+        pricePerKm: "",
+        useTruckFuel: true,
+        manualFuel: "",
+        includeDieselPrice: true,
+        dieselPrice: 2,
+      }, overrides || {});
+    }
+
     return [
       {
         name: "converts metres to metres",
@@ -889,6 +905,228 @@
           equal(result.totals.delivery, null, "delivery");
           closeTo(result.totals.combined.trucks.exact, 1.6, "combined exact trucks");
           equal(result.totals.combined.trucks.rounded, 2, "combined rounded trucks");
+          closeTo(result.totals.combined.price.exact, 1280, "combined exact price");
+          closeTo(result.totals.combined.price.rounded, 1600, "combined rounded price");
+        },
+      },
+      {
+        name: "calculates travel from calculated trips",
+        run() {
+          const result = Calc.calculateTravel(sampleTravel(), {
+            tripsExact: 1.6,
+            tripsRounded: 2,
+            truckFuelConsumption: 8,
+          });
+          closeTo(result.tripsExact, 2, "exact trips");
+          closeTo(result.tripsRounded, 2, "rounded trips");
+          closeTo(result.litresExact, 10, "exact litres");
+          closeTo(result.litresRounded, 10, "rounded litres");
+          closeTo(result.cost.exact, 20, "exact cost");
+          closeTo(result.cost.rounded, 20, "rounded cost");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "uses manual trips and manual fuel consumption",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel({
+              useCalculatedTrips: false,
+              manualTrips: 3,
+              useTruckFuel: false,
+              manualFuel: 6,
+            }),
+            { tripsExact: 1.6, tripsRounded: 2, truckFuelConsumption: 8 }
+          );
+          closeTo(result.tripsExact, 3, "exact trips");
+          closeTo(result.tripsRounded, 3, "rounded trips");
+          closeTo(result.fuelConsumption, 6, "fuel consumption");
+          closeTo(result.litresExact, 20, "exact litres");
+          closeTo(result.litresRounded, 20, "rounded litres");
+          closeTo(result.cost.exact, 40, "exact cost");
+          closeTo(result.cost.rounded, 40, "rounded cost");
+        },
+      },
+      {
+        name: "calculates fuel without a diesel price",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel({ includeDieselPrice: false, dieselPrice: "" }),
+            { tripsExact: 1.6, tripsRounded: 2, truckFuelConsumption: 8 }
+          );
+          closeTo(result.litresExact, 10, "exact litres");
+          closeTo(result.litresRounded, 10, "rounded litres");
+          closeTo(result.cost.exact, 0, "exact cost");
+          closeTo(result.cost.rounded, 0, "rounded cost");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "warns about missing travel inputs",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel({ distance: "", dieselPrice: "" }),
+            { tripsExact: 0, tripsRounded: 0, truckFuelConsumption: "" }
+          );
+          const codes = result.warnings.map((warning) => warning.code);
+          equal(codes.includes("travel-missing-distance"), true, "distance warning");
+          equal(codes.includes("travel-missing-fuel"), true, "fuel warning");
+          equal(codes.includes("travel-missing-trips"), true, "trips warning");
+          equal(codes.includes("travel-missing-diesel"), true, "diesel warning");
+        },
+      },
+      {
+        name: "warns about a missing diesel price",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel({ dieselPrice: "" }),
+            { tripsExact: 1.6, tripsRounded: 2, truckFuelConsumption: 8 }
+          );
+          equal(
+            result.warnings.some((warning) => warning.code === "travel-missing-diesel"),
+            true,
+            "diesel warning"
+          );
+        },
+      },
+      {
+        name: "warns about missing truck fuel consumption",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel(),
+            { tripsExact: 1.6, tripsRounded: 2, truckFuelConsumption: "" }
+          );
+          equal(
+            result.warnings.some((warning) => warning.code === "travel-missing-fuel"),
+            true,
+            "fuel warning"
+          );
+        },
+      },
+      {
+        name: "warns about missing travel trips",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel(),
+            { tripsExact: 0, tripsRounded: 0, truckFuelConsumption: 8 }
+          );
+          equal(
+            result.warnings.some((warning) => warning.code === "travel-missing-trips"),
+            true,
+            "trips warning"
+          );
+        },
+      },
+      {
+        name: "adds travel to the job total",
+        run() {
+          const job = sampleJob();
+          job.truck.fuelConsumption = "8";
+          job.travel = sampleTravel();
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.travel.cost.exact, 20, "travel exact");
+          closeTo(result.totals.travel.cost.rounded, 20, "travel rounded");
+          closeTo(result.totals.combined.price.exact, 1300, "combined exact price");
+          closeTo(result.totals.combined.price.rounded, 1620, "combined rounded price");
+          closeTo(result.totals.combined.gst.exact.total, 1300, "combined exact total");
+          closeTo(result.totals.combined.gst.rounded.total, 1620, "combined rounded total");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "applies GST to the total including travel",
+        run() {
+          const job = sampleJob();
+          job.truck.fuelConsumption = "8";
+          job.travel = sampleTravel();
+          job.gst = { mode: "add", rate: 10 };
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.combined.gst.exact.total, 1430, "combined exact total");
+          closeTo(result.totals.combined.gst.exact.gst, 130, "combined exact gst");
+          closeTo(result.totals.combined.gst.rounded.total, 1782, "combined rounded total");
+          closeTo(result.totals.combined.gst.rounded.gst, 162, "combined rounded gst");
+        },
+      },
+      {
+        name: "uses combined spoil and delivery trips for travel",
+        run() {
+          const job = sampleJob();
+          job.truck.capacityMode = "both";
+          job.truck.fuelConsumption = "8";
+          job.delivery = sampleDelivery();
+          job.travel = sampleTravel();
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.combined.trucks.exact, 3.475, "combined exact trucks");
+          equal(result.totals.combined.trucks.rounded, 4, "combined rounded trucks");
+          closeTo(result.totals.travel.cost.exact, 40, "travel exact");
+          closeTo(result.totals.travel.cost.rounded, 40, "travel rounded");
+          closeTo(result.totals.combined.price.exact, 3270, "combined exact price");
+          closeTo(result.totals.combined.price.rounded, 3690, "combined rounded price");
+        },
+      },
+      {
+        name: "calculates price-per-km travel",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel({ usePricePerKm: true, pricePerKm: 1.5, distance: 20, roundTrip: true }),
+            { tripsExact: 1.6, tripsRounded: 2, truckFuelConsumption: "" }
+          );
+          closeTo(result.totalKm, 80, "total distance");
+          closeTo(result.cost.exact, 120, "exact cost");
+          closeTo(result.cost.rounded, 120, "rounded cost");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "supports a one-way travel distance",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel({
+              usePricePerKm: true,
+              pricePerKm: 1.5,
+              distance: 40,
+              roundTrip: false,
+            }),
+            { tripsExact: 1.6, tripsRounded: 2, truckFuelConsumption: "" }
+          );
+          closeTo(result.totalKm, 80, "total distance");
+          closeTo(result.cost.rounded, 120, "rounded cost");
+        },
+      },
+      {
+        name: "warns about a missing price per km",
+        run() {
+          const result = Calc.calculateTravel(
+            sampleTravel({ usePricePerKm: true, pricePerKm: "" }),
+            { tripsExact: 1.6, tripsRounded: 2, truckFuelConsumption: "" }
+          );
+          equal(
+            result.warnings.some((warning) => warning.code === "travel-missing-price-per-km"),
+            true,
+            "price per km warning"
+          );
+        },
+      },
+      {
+        name: "adds price-per-km travel to the job total",
+        run() {
+          const job = sampleJob();
+          job.travel = sampleTravel({ usePricePerKm: true, pricePerKm: 1.5 });
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.travel.totalKm, 80, "total distance");
+          closeTo(result.totals.travel.cost.rounded, 120, "travel cost");
+          closeTo(result.totals.combined.price.exact, 1400, "combined exact price");
+          closeTo(result.totals.combined.price.rounded, 1720, "combined rounded price");
+        },
+      },
+      {
+        name: "keeps combined totals when travel is disabled",
+        run() {
+          const job = sampleJob();
+          job.truck.fuelConsumption = "8";
+          job.travel = { enabled: false };
+          const result = Calc.calculateJob(job);
+          equal(result.totals.travel, null, "travel");
           closeTo(result.totals.combined.price.exact, 1280, "combined exact price");
           closeTo(result.totals.combined.price.rounded, 1600, "combined rounded price");
         },
