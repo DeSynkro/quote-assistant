@@ -1,23 +1,36 @@
 (function () {
   "use strict";
 
-  const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
-  const dimensions = document.getElementById("sandbox-dimensions");
+  const sandbox = document.getElementById("sandbox");
+  const unevenToggle = document.getElementById("sandbox-uneven");
+  const shapeModeFields = document.getElementById("sandbox-shape-mode-fields");
+  const shapeMode = document.getElementById("sandbox-shape-mode");
+  const rectangleFields = document.getElementById("sandbox-rectangle-fields");
+  const unevenFields = document.getElementById("sandbox-uneven-fields");
+  const manualAreaFields = document.getElementById("sandbox-manual-area-fields");
+  const manualVolumeFields = document.getElementById("sandbox-manual-volume-fields");
   const depthFields = document.getElementById("sandbox-depth-fields");
-  const assumedFields = document.getElementById("sandbox-assumed-fields");
-  const manualFields = document.getElementById("sandbox-manual-fields");
   const widthInput = document.getElementById("sandbox-width");
   const widthUnit = document.getElementById("sandbox-width-unit");
   const lengthInput = document.getElementById("sandbox-length");
   const lengthUnit = document.getElementById("sandbox-length-unit");
+  const unevenWidthInput = document.getElementById("sandbox-uneven-width");
+  const unevenWidthUnit = document.getElementById("sandbox-uneven-width-unit");
+  const leftInput = document.getElementById("sandbox-left-length");
+  const leftUnit = document.getElementById("sandbox-left-length-unit");
+  const rightInput = document.getElementById("sandbox-right-length");
+  const rightUnit = document.getElementById("sandbox-right-length-unit");
+  const manualAreaInput = document.getElementById("sandbox-manual-area");
+  const manualVolumeInput = document.getElementById("sandbox-manual-volume");
   const depthInput = document.getElementById("sandbox-depth");
   const depthUnit = document.getElementById("sandbox-depth-unit");
-  const assumedInput = document.getElementById("sandbox-assumed-depth");
-  const assumedUnit = document.getElementById("sandbox-assumed-depth-unit");
-  const manualInput = document.getElementById("sandbox-manual-volume");
+  const areaBox = document.getElementById("sandbox-area-box");
+  const areaOutput = document.getElementById("sandbox-area");
+  const shapeLabel = document.getElementById("sandbox-shape-label");
+  const areaFormula = document.getElementById("sandbox-area-formula");
   const volumeOutput = document.getElementById("sandbox-volume");
-  const sourceOutput = document.getElementById("sandbox-source");
-  const formulaOutput = document.getElementById("sandbox-formula");
+  const depthNote = document.getElementById("sandbox-depth-note");
+  const volumeFormula = document.getElementById("sandbox-volume-formula");
   const swellEnabled = document.getElementById("sandbox-swell-enabled");
   const swellPercent = document.getElementById("sandbox-swell");
   const capacityMode = document.getElementById("sandbox-capacity-mode");
@@ -27,8 +40,6 @@
   const trucksOutput = document.getElementById("sandbox-trucks");
   const limitOutput = document.getElementById("sandbox-limit");
   const truckFormulaOutput = document.getElementById("sandbox-truck-formula");
-
-  let mode = "measured";
 
   function format(value) {
     return new Intl.NumberFormat(undefined, {
@@ -44,43 +55,84 @@
     return format(number);
   }
 
-  function buildSection() {
-    if (mode === "manual") {
+  function currentShape() {
+    return unevenToggle.checked ? shapeMode.value : "rectangle";
+  }
+
+  function buildSection(shape) {
+    if (shape === "manualVolume") {
       return {
-        mode,
-        manualVolume: manualInput.value,
+        shape,
+        manualVolume: manualVolumeInput.value,
       };
     }
 
     const section = {
-      mode,
-      width: widthInput.value,
-      widthUnit: widthUnit.value,
-      length: lengthInput.value,
-      lengthUnit: lengthUnit.value,
+      shape,
+      depth: depthInput.value,
+      depthUnit: depthUnit.value,
     };
 
-    if (mode === "assumed") {
-      section.assumedDepth = assumedInput.value;
-      section.assumedDepthUnit = assumedUnit.value;
+    if (shape === "unevenEnds") {
+      section.width = unevenWidthInput.value;
+      section.widthUnit = unevenWidthUnit.value;
+      section.leftLength = leftInput.value;
+      section.leftLengthUnit = leftUnit.value;
+      section.rightLength = rightInput.value;
+      section.rightLengthUnit = rightUnit.value;
+    } else if (shape === "manualArea") {
+      section.area = manualAreaInput.value;
     } else {
-      section.depth = depthInput.value;
-      section.depthUnit = depthUnit.value;
+      section.width = widthInput.value;
+      section.widthUnit = widthUnit.value;
+      section.length = lengthInput.value;
+      section.lengthUnit = lengthUnit.value;
     }
 
     return section;
   }
 
-  function buildFormula(section, result) {
-    if (mode === "manual") {
+  function shapeLabelFor(shape) {
+    if (shape === "unevenEnds") {
+      return "Uneven ends";
+    }
+    if (shape === "manualArea") {
+      return "Manual area";
+    }
+    if (shape === "manualVolume") {
+      return "Manual volume";
+    }
+    return "Rectangle";
+  }
+
+  function buildAreaFormula(section, result, shape) {
+    if (shape === "unevenEnds") {
+      return `${display(unevenWidthInput.value)} ${unevenWidthUnit.value} × (${display(leftInput.value)} ${leftUnit.value} + ${display(rightInput.value)} ${rightUnit.value}) ÷ 2 = ${format(result.area)} m²`;
+    }
+
+    if (shape === "manualArea") {
+      return `Manual area = ${format(result.area)} m²`;
+    }
+
+    return `${display(widthInput.value)} ${widthUnit.value} × ${display(lengthInput.value)} ${lengthUnit.value} = ${format(result.area)} m²`;
+  }
+
+  function buildVolumeFormula(section, result, shape) {
+    if (shape === "manualVolume") {
       return `Manual volume = ${format(result.volume)} m³`;
     }
 
-    const depth = mode === "assumed"
-      ? `${display(assumedInput.value)} ${assumedUnit.value} assumed`
-      : `${display(depthInput.value)} ${depthUnit.value}`;
+    if (result.needsDepth) {
+      return "Add a depth to calculate volume.";
+    }
 
-    return `${display(widthInput.value)} ${widthUnit.value} × ${display(lengthInput.value)} ${lengthUnit.value} × ${depth} = ${format(result.volume)} m³`;
+    if (result.area <= 0) {
+      return "Add valid dimensions to calculate volume.";
+    }
+
+    const depth = Calc.toMetres(section.depth, section.depthUnit);
+
+    return `${format(result.area)} m² × ${format(depth)} m = ${format(result.volume)} m³`;
   }
 
   function buildTruckFormula(volume, weight, result) {
@@ -99,8 +151,19 @@
       : "Add a truck capacity and load details";
   }
 
+  function applyLayout(shape) {
+    shapeModeFields.hidden = !unevenToggle.checked;
+    rectangleFields.hidden = shape !== "rectangle";
+    unevenFields.hidden = shape !== "unevenEnds";
+    manualAreaFields.hidden = shape !== "manualArea";
+    manualVolumeFields.hidden = shape !== "manualVolume";
+    depthFields.hidden = shape === "manualVolume";
+    areaBox.hidden = shape === "manualVolume";
+  }
+
   function update() {
-    const section = buildSection();
+    const shape = currentShape();
+    const section = buildSection(shape);
     const result = Calc.sectionVolume(section);
     const looseVolume = Calc.applySwell(
       result.volume,
@@ -121,13 +184,31 @@
       ? ` (${truckResult.rounded} rounded)`
       : "";
 
+    applyLayout(shape);
+
+    if (shape !== "manualVolume") {
+      areaOutput.textContent = `${format(result.area)} m²`;
+      shapeLabel.textContent = shapeLabelFor(shape);
+      areaFormula.textContent = buildAreaFormula(section, result, shape);
+    }
+
     volumeOutput.textContent = `${format(result.volume)} m³`;
-    sourceOutput.textContent = result.source === "measured"
-      ? "Measured depth"
-      : result.source === "assumed"
-        ? "Assumed depth"
-        : "Manual volume";
-    formulaOutput.textContent = buildFormula(section, result);
+
+    if (shape === "manualVolume") {
+      depthNote.textContent = "Manual volume entered";
+      depthNote.classList.remove("warn");
+    } else if (result.needsDepth) {
+      depthNote.textContent = "Depth needed for volume";
+      depthNote.classList.add("warn");
+    } else if (result.area <= 0) {
+      depthNote.textContent = "Enter valid dimensions";
+      depthNote.classList.add("warn");
+    } else {
+      depthNote.textContent = `Depth ${display(depthInput.value)} ${depthUnit.value}`;
+      depthNote.classList.remove("warn");
+    }
+
+    volumeFormula.textContent = buildVolumeFormula(section, result, shape);
 
     trucksOutput.textContent = `${format(truckResult.exact)} trucks${roundedText}`;
     limitOutput.textContent = truckResult.limit === "volume"
@@ -138,46 +219,10 @@
     truckFormulaOutput.textContent = buildTruckFormula(looseVolume, weight, truckResult);
   }
 
-  function setMode(nextMode) {
-    mode = nextMode;
-
-    for (const button of modeButtons) {
-      const active = button.dataset.mode === mode;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    }
-
-    dimensions.hidden = mode === "manual";
-    depthFields.hidden = mode !== "measured";
-    assumedFields.hidden = mode !== "assumed";
-    manualFields.hidden = mode !== "manual";
-
-    update();
+  for (const element of sandbox.querySelectorAll("input, select")) {
+    element.addEventListener("input", update);
+    element.addEventListener("change", update);
   }
 
-  for (const button of modeButtons) {
-    button.addEventListener("click", () => setMode(button.dataset.mode));
-  }
-
-  for (const input of [
-    widthInput,
-    lengthInput,
-    depthInput,
-    assumedInput,
-    manualInput,
-    swellPercent,
-    truckVolume,
-    truckWeight,
-    loadWeight,
-  ]) {
-    input.addEventListener("input", update);
-  }
-
-  for (const select of [widthUnit, lengthUnit, depthUnit, assumedUnit, capacityMode]) {
-    select.addEventListener("change", update);
-  }
-
-  swellEnabled.addEventListener("change", update);
-
-  setMode("measured");
+  update();
 })();

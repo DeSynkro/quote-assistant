@@ -127,6 +127,23 @@
     margin-top: 10px;
   }
 
+  .fields.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #sandbox-shape-mode-fields {
+    margin-bottom: 10px;
+  }
+
+  .sandbox-toggle {
+    margin-bottom: 14px;
+  }
+
+  .sandbox-toggle span {
+    font-size: 14px;
+    color: var(--text);
+  }
+
   .field {
     display: flex;
     flex-direction: column;
@@ -200,6 +217,10 @@
     color: var(--muted);
   }
 
+  .result-source.warn {
+    color: #f2b84b;
+  }
+
   .formula {
     margin-top: 7px;
     color: #cfd6e0;
@@ -259,7 +280,8 @@
       padding: 20px 12px 48px;
     }
 
-    .fields {
+    .fields,
+    .fields.three {
       grid-template-columns: minmax(0, 1fr);
     }
   }
@@ -270,17 +292,27 @@
   <h1>Calculation tests</h1>
   <p>Open this file directly in a browser. No server or install required.</p>
 
-  <section class="panel" aria-labelledby="sandbox-title">
+  <section class="panel" id="sandbox" aria-labelledby="sandbox-title">
     <h2 id="sandbox-title">Try the calculation</h2>
     <p>Change the values and units. The result updates as you type.</p>
 
-    <div class="mode" role="group" aria-label="Section mode">
-      <button type="button" data-mode="measured" class="active" aria-pressed="true">Measured depth</button>
-      <button type="button" data-mode="assumed" aria-pressed="false">Assumed depth</button>
-      <button type="button" data-mode="manual" aria-pressed="false">Manual volume</button>
+    <label class="check-row sandbox-toggle">
+      <input id="sandbox-uneven" type="checkbox">
+      <span>Uneven or odd shape?</span>
+    </label>
+
+    <div class="fields one" id="sandbox-shape-mode-fields" hidden>
+      <label class="field">
+        <span>Measure by</span>
+        <select id="sandbox-shape-mode">
+          <option value="unevenEnds">Uneven ends</option>
+          <option value="manualArea">Manual area</option>
+          <option value="manualVolume">Manual volume</option>
+        </select>
+      </label>
     </div>
 
-    <div class="fields" id="sandbox-dimensions">
+    <div class="fields" id="sandbox-rectangle-fields">
       <label class="field">
         <span>Width</span>
         <span class="input-row">
@@ -305,6 +337,66 @@
       </label>
     </div>
 
+    <div class="fields three" id="sandbox-uneven-fields" hidden>
+      <label class="field">
+        <span>Width across</span>
+        <span class="input-row">
+          <input id="sandbox-uneven-width" type="number" inputmode="decimal" step="any" value="11">
+          <select id="sandbox-uneven-width-unit" aria-label="Uneven width unit">
+            <option>m</option>
+            <option>cm</option>
+            <option>mm</option>
+          </select>
+        </span>
+      </label>
+      <label class="field">
+        <span>Left length</span>
+        <span class="input-row">
+          <input id="sandbox-left-length" type="number" inputmode="decimal" step="any" value="7">
+          <select id="sandbox-left-length-unit" aria-label="Left length unit">
+            <option>m</option>
+            <option>cm</option>
+            <option>mm</option>
+          </select>
+        </span>
+      </label>
+      <label class="field">
+        <span>Right length</span>
+        <span class="input-row">
+          <input id="sandbox-right-length" type="number" inputmode="decimal" step="any" value="3">
+          <select id="sandbox-right-length-unit" aria-label="Right length unit">
+            <option>m</option>
+            <option>cm</option>
+            <option>mm</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
+    <div class="fields one" id="sandbox-manual-area-fields" hidden>
+      <label class="field">
+        <span>Manual area</span>
+        <span class="input-row">
+          <input id="sandbox-manual-area" type="number" inputmode="decimal" step="any" value="42">
+          <select aria-label="Manual area unit">
+            <option>m²</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
+    <div class="fields one" id="sandbox-manual-volume-fields" hidden>
+      <label class="field">
+        <span>Manual volume</span>
+        <span class="input-row">
+          <input id="sandbox-manual-volume" type="number" inputmode="decimal" step="any" value="4.5">
+          <select aria-label="Manual volume unit">
+            <option>m³</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
     <div class="fields one" id="sandbox-depth-fields">
       <label class="field">
         <span>Depth</span>
@@ -319,37 +411,18 @@
       </label>
     </div>
 
-    <div class="fields one" id="sandbox-assumed-fields" hidden>
-      <label class="field">
-        <span>Assumed depth</span>
-        <span class="input-row">
-          <input id="sandbox-assumed-depth" type="number" inputmode="decimal" step="any" value="100">
-          <select id="sandbox-assumed-depth-unit" aria-label="Assumed depth unit">
-            <option>mm</option>
-            <option>cm</option>
-            <option>m</option>
-          </select>
-        </span>
-      </label>
+    <div class="result-box" aria-live="polite" id="sandbox-area-box">
+      <div class="result-label">Area</div>
+      <div class="result-value" id="sandbox-area">30 m²</div>
+      <div class="result-source" id="sandbox-shape-label">Rectangle</div>
+      <div class="formula" id="sandbox-area-formula">10 m × 3 m = 30 m²</div>
     </div>
 
-    <div class="fields one" id="sandbox-manual-fields" hidden>
-      <label class="field">
-        <span>Manual volume</span>
-        <span class="input-row">
-          <input id="sandbox-manual-volume" type="number" inputmode="decimal" step="any" value="4.5">
-          <select aria-label="Manual volume unit">
-            <option>m³</option>
-          </select>
-        </span>
-      </label>
-    </div>
-
-    <div class="result-box" aria-live="polite">
+    <div class="result-box" aria-live="polite" id="sandbox-volume-box">
       <div class="result-label">Volume</div>
       <div class="result-value" id="sandbox-volume">3 m³</div>
-      <div class="result-source" id="sandbox-source">Measured depth</div>
-      <div class="formula" id="sandbox-formula">10 m × 3 m × 100 mm = 3 m³</div>
+      <div class="result-source" id="sandbox-depth-note">Depth 100 mm</div>
+      <div class="formula" id="sandbox-volume-formula">30 m² × 0.1 m = 3 m³</div>
     </div>
 
     <h3 class="subhead">Truck load</h3>

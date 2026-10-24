@@ -26,28 +26,45 @@
   }
 
   function sectionVolume(section) {
-    const mode = section.mode || "measured";
+    const shape = section.shape || "rectangle";
 
-    if (mode === "manual") {
+    if (shape === "manualVolume") {
       const volume = Number(section.manualVolume);
       return {
+        area: null,
         volume: Number.isFinite(volume) && volume > 0 ? volume : 0,
-        source: "manual",
+        shape: "manualVolume",
+        needsDepth: false,
       };
     }
 
-    const width = toMetres(section.width, section.widthUnit);
-    const length = toMetres(section.length, section.lengthUnit);
-    const depthSource = mode === "assumed" ? "assumed" : "measured";
-    const depth = depthSource === "assumed"
-      ? toMetres(section.assumedDepth, section.assumedDepthUnit)
-      : toMetres(section.depth, section.depthUnit);
+    let area = 0;
 
-    const volume = width * length * depth;
+    if (shape === "manualArea") {
+      const value = Number(section.area);
+      area = Number.isFinite(value) && value > 0 ? value : 0;
+    } else if (shape === "unevenEnds") {
+      const width = toMetres(section.width, section.widthUnit);
+      const left = toMetres(section.leftLength, section.leftLengthUnit);
+      const right = toMetres(section.rightLength, section.rightLengthUnit);
+      const value = width * (left + right) / 2;
+      area = Number.isFinite(value) && value > 0 ? value : 0;
+    } else {
+      const width = toMetres(section.width, section.widthUnit);
+      const length = toMetres(section.length, section.lengthUnit);
+      const value = width * length;
+      area = Number.isFinite(value) && value > 0 ? value : 0;
+    }
+
+    const depth = toMetres(section.depth, section.depthUnit);
+    const hasDepth = Number.isFinite(depth) && depth > 0;
+    const volume = hasDepth ? area * depth : 0;
 
     return {
-      volume: Number.isFinite(volume) && volume > 0 ? volume : 0,
-      source: depthSource,
+      area,
+      volume,
+      shape,
+      needsDepth: area > 0 && !hasDepth,
     };
   }
 

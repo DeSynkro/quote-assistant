@@ -66,9 +66,15 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 
 ### Job structure
 - A job is modular: multiple sections, each added with an "Add More" button.
-- Each section: width × length × optional depth, plus a material choice.
+- Each section has a shape mode and a material choice.
+- **Rectangle:** width × length × depth. This is the default.
+- **Uneven ends:** width across, left length, right length and depth. The area
+  uses the average of the two ends.
+- **Manual area:** area in m² × depth.
+- **Manual volume:** enter the volume in m³ directly.
 - Sections are independent and can be added, duplicated, removed, and reordered.
-- A section may instead use a manual volume override for irregular shapes.
+- For L-shapes and other complex outlines, split the area into multiple sections
+  or use manual area.
 
 ### Materials and density
 - Volume-only is the default path; weight and density are optional.
@@ -87,11 +93,18 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Defaults: footprint dimensions in metres, depth in millimetres.
 - Each field offers m / cm / mm; truck volume in m³ and weight in tonnes.
 
-### Unknown depth
-- "Include height?" toggle per section. When off, the section still counts toward
-  the estimate using an optional **assumed depth** (default 100 mm), clearly
-  flagged in the result, or a manual volume override.
-- The result distinguishes measured values from assumed ones.
+### Uneven areas and missing depth
+- The old assumed-depth option is removed.
+- Depth is required for rectangle, uneven ends and manual area. If depth is
+  missing, the section still shows its area, but volume cannot be calculated and
+  the result warns about the missing depth.
+- Manual volume is the fallback when the volume is already known.
+- Uneven ends assumes the left and right ends are parallel and that the width is
+  measured across, square to those ends.
+- Four side lengths alone do not determine the area of a general quadrilateral.
+  A four-sides-plus-diagonal mode is a possible later addition.
+- Complex outlines should be split into multiple sections or entered as manual
+  area.
 
 ### Bring-in material (added during discussion)
 - Some jobs also require material to be brought **to** the site, not just spoil
@@ -228,7 +241,9 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - **Copy summary** to clipboard (text only) for pasting into a note or message.
 - **Price rounding display** option: nearest $1 / $5 / $10.
 - **Validation and warnings**: zero/negative dimensions, weight over capacity,
-  missing truck size, assumed-depth warnings.
+  missing truck size and missing depth warnings.
+- **Four sides plus diagonal** for exact irregular quadrilateral areas, if real
+  jobs need more than uneven ends or manual area.
 - **Touch-friendly UI**: large targets, numeric keypads on mobile, readable in
   sunlight, dark theme.
 - **Optional PWA install** if the Docker build is later served over HTTPS. A plain

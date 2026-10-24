@@ -32,7 +32,8 @@ Open the mockup or the test page directly in a browser.
 
 ## Planned features
 
-- Multiple job sections with width, length and optional depth
+- Multiple job sections with rectangle, uneven-end, manual-area and manual-volume modes
+- Area, volume and formula shown for each section
 - Truck limits by volume, weight, or both
 - Material presets with swell and settling allowances
 - Spoil removal and material delivery calculations

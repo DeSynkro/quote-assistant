@@ -52,106 +52,180 @@
         },
       },
       {
-        name: "calculates a measured section",
+        name: "calculates a rectangle area and volume",
         run() {
           const result = Calc.sectionVolume({
+            shape: "rectangle",
             width: 10,
             widthUnit: "m",
             length: 3,
             lengthUnit: "m",
-            mode: "measured",
             depth: 100,
             depthUnit: "mm",
           });
+          closeTo(result.area, 30, "area");
           closeTo(result.volume, 3, "volume");
-          equal(result.source, "measured", "source");
+          equal(result.shape, "rectangle", "shape");
+          equal(result.needsDepth, false, "needs depth");
         },
       },
       {
-        name: "calculates a second measured section",
+        name: "calculates a second rectangle area and volume",
         run() {
           const result = Calc.sectionVolume({
+            shape: "rectangle",
             width: 5,
             widthUnit: "m",
             length: 5,
             lengthUnit: "m",
-            mode: "measured",
             depth: 200,
             depthUnit: "mm",
           });
+          closeTo(result.area, 25, "area");
           closeTo(result.volume, 5, "volume");
-          equal(result.source, "measured", "source");
         },
       },
       {
-        name: "uses an assumed depth",
+        name: "calculates uneven ends",
         run() {
           const result = Calc.sectionVolume({
-            width: 10,
+            shape: "unevenEnds",
+            width: 11,
             widthUnit: "m",
-            length: 3,
-            lengthUnit: "m",
-            mode: "assumed",
-            assumedDepth: 100,
-            assumedDepthUnit: "mm",
+            leftLength: 7,
+            leftLengthUnit: "m",
+            rightLength: 3,
+            rightLengthUnit: "m",
+            depth: 100,
+            depthUnit: "mm",
           });
-          closeTo(result.volume, 3, "volume");
-          equal(result.source, "assumed", "source");
+          closeTo(result.area, 55, "area");
+          closeTo(result.volume, 5.5, "volume");
+          equal(result.shape, "unevenEnds", "shape");
+          equal(result.needsDepth, false, "needs depth");
+        },
+      },
+      {
+        name: "calculates uneven ends with mixed units",
+        run() {
+          const result = Calc.sectionVolume({
+            shape: "unevenEnds",
+            width: 1100,
+            widthUnit: "cm",
+            leftLength: 700,
+            leftLengthUnit: "cm",
+            rightLength: 3000,
+            rightLengthUnit: "mm",
+            depth: 10,
+            depthUnit: "cm",
+          });
+          closeTo(result.area, 55, "area");
+          closeTo(result.volume, 5.5, "volume");
+        },
+      },
+      {
+        name: "calculates manual area",
+        run() {
+          const result = Calc.sectionVolume({
+            shape: "manualArea",
+            area: 42,
+            depth: 200,
+            depthUnit: "mm",
+          });
+          closeTo(result.area, 42, "area");
+          closeTo(result.volume, 8.4, "volume");
+          equal(result.shape, "manualArea", "shape");
         },
       },
       {
         name: "uses a manual volume",
         run() {
           const result = Calc.sectionVolume({
-            mode: "manual",
+            shape: "manualVolume",
             manualVolume: 4.5,
           });
+          equal(result.area, null, "area");
           closeTo(result.volume, 4.5, "volume");
-          equal(result.source, "manual", "source");
+          equal(result.shape, "manualVolume", "shape");
+          equal(result.needsDepth, false, "needs depth");
         },
       },
       {
-        name: "returns zero when measured depth is missing",
+        name: "shows rectangle area when depth is missing",
         run() {
           const result = Calc.sectionVolume({
+            shape: "rectangle",
             width: 10,
             widthUnit: "m",
             length: 3,
             lengthUnit: "m",
-            mode: "measured",
           });
+          closeTo(result.area, 30, "area");
           closeTo(result.volume, 0, "volume");
-          equal(result.source, "measured", "source");
+          equal(result.needsDepth, true, "needs depth");
         },
       },
       {
-        name: "returns zero for negative dimensions",
+        name: "shows manual area when depth is missing",
         run() {
           const result = Calc.sectionVolume({
+            shape: "manualArea",
+            area: 42,
+          });
+          closeTo(result.area, 42, "area");
+          closeTo(result.volume, 0, "volume");
+          equal(result.needsDepth, true, "needs depth");
+        },
+      },
+      {
+        name: "returns zero area for negative dimensions",
+        run() {
+          const result = Calc.sectionVolume({
+            shape: "rectangle",
             width: -10,
             widthUnit: "m",
             length: 3,
             lengthUnit: "m",
-            mode: "measured",
             depth: 100,
             depthUnit: "mm",
           });
+          closeTo(result.area, 0, "area");
           closeTo(result.volume, 0, "volume");
         },
       },
       {
-        name: "returns zero for a zero depth",
+        name: "returns zero area for a negative uneven side",
         run() {
           const result = Calc.sectionVolume({
+            shape: "unevenEnds",
+            width: 11,
+            widthUnit: "m",
+            leftLength: -7,
+            leftLengthUnit: "m",
+            rightLength: 3,
+            rightLengthUnit: "m",
+            depth: 100,
+            depthUnit: "mm",
+          });
+          closeTo(result.area, 0, "area");
+          closeTo(result.volume, 0, "volume");
+        },
+      },
+      {
+        name: "returns zero volume for a zero depth",
+        run() {
+          const result = Calc.sectionVolume({
+            shape: "rectangle",
             width: 10,
             widthUnit: "m",
             length: 3,
             lengthUnit: "m",
-            mode: "measured",
             depth: 0,
             depthUnit: "mm",
           });
+          closeTo(result.area, 30, "area");
           closeTo(result.volume, 0, "volume");
+          equal(result.needsDepth, true, "needs depth");
         },
       },
       {
