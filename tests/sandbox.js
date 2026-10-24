@@ -24,6 +24,7 @@
   const manualVolumeInput = document.getElementById("sandbox-manual-volume");
   const depthInput = document.getElementById("sandbox-depth");
   const depthUnit = document.getElementById("sandbox-depth-unit");
+  const densityInput = document.getElementById("sandbox-density");
   const areaBox = document.getElementById("sandbox-area-box");
   const areaOutput = document.getElementById("sandbox-area");
   const shapeLabel = document.getElementById("sandbox-shape-label");
@@ -36,7 +37,6 @@
   const capacityMode = document.getElementById("sandbox-capacity-mode");
   const truckVolume = document.getElementById("sandbox-truck-volume");
   const truckWeight = document.getElementById("sandbox-truck-weight");
-  const loadWeight = document.getElementById("sandbox-load-weight");
   const trucksOutput = document.getElementById("sandbox-trucks");
   const limitOutput = document.getElementById("sandbox-limit");
   const truckFormulaOutput = document.getElementById("sandbox-truck-formula");
@@ -47,6 +47,8 @@
   const priceRoundedOutput = document.getElementById("sandbox-price-rounded");
   const priceFormulaOutput = document.getElementById("sandbox-price-formula");
   const gstFormulaOutput = document.getElementById("sandbox-gst-formula");
+  const warningsBox = document.getElementById("sandbox-warnings-box");
+  const warningsOutput = document.getElementById("sandbox-warnings");
 
   function format(value) {
     return new Intl.NumberFormat(undefined, {
@@ -77,36 +79,57 @@
   }
 
   function buildSection(shape) {
+    const section = { shape };
+
     if (shape === "manualVolume") {
-      return {
-        shape,
-        manualVolume: manualVolumeInput.value,
-      };
+      section.manualVolume = manualVolumeInput.value;
+    } else {
+      section.depth = depthInput.value;
+      section.depthUnit = depthUnit.value;
+
+      if (shape === "unevenEnds") {
+        section.width = unevenWidthInput.value;
+        section.widthUnit = unevenWidthUnit.value;
+        section.leftLength = leftInput.value;
+        section.leftLengthUnit = leftUnit.value;
+        section.rightLength = rightInput.value;
+        section.rightLengthUnit = rightUnit.value;
+      } else if (shape === "manualArea") {
+        section.area = manualAreaInput.value;
+      } else {
+        section.width = widthInput.value;
+        section.widthUnit = widthUnit.value;
+        section.length = lengthInput.value;
+        section.lengthUnit = lengthUnit.value;
+      }
     }
 
-    const section = {
-      shape,
-      depth: depthInput.value,
-      depthUnit: depthUnit.value,
-    };
-
-    if (shape === "unevenEnds") {
-      section.width = unevenWidthInput.value;
-      section.widthUnit = unevenWidthUnit.value;
-      section.leftLength = leftInput.value;
-      section.leftLengthUnit = leftUnit.value;
-      section.rightLength = rightInput.value;
-      section.rightLengthUnit = rightUnit.value;
-    } else if (shape === "manualArea") {
-      section.area = manualAreaInput.value;
-    } else {
-      section.width = widthInput.value;
-      section.widthUnit = widthUnit.value;
-      section.length = lengthInput.value;
-      section.lengthUnit = lengthUnit.value;
+    const density = Number(densityInput.value);
+    if (Number.isFinite(density) && density > 0) {
+      section.material = { looseDensity: density };
     }
 
     return section;
+  }
+
+  function buildJob(shape) {
+    return {
+      sections: [buildSection(shape)],
+      truck: {
+        capacityMode: capacityMode.value,
+        volumeCapacity: truckVolume.value,
+        weightCapacity: truckWeight.value,
+      },
+      swell: {
+        enabled: swellEnabled.checked,
+        percent: swellPercent.value,
+      },
+      pricePerTruck: priceInput.value,
+      gst: {
+        mode: gstMode.value,
+        rate: gstRate.value,
+      },
+    };
   }
 
   function shapeLabelFor(shape) {
@@ -180,23 +203,13 @@
 
   function update() {
     const shape = currentShape();
-    const section = buildSection(shape);
-    const result = Calc.sectionVolume(section);
-    const looseVolume = Calc.applySwell(
-      result.volume,
-      swellEnabled.checked,
-      swellPercent.value
-    );
-    const rawWeight = loadWeight.value === "" ? null : Number(loadWeight.value);
-    const weight = Number.isFinite(rawWeight) && rawWeight > 0 ? rawWeight : null;
-    const truckResult = Calc.truckLoads(
-      { volume: looseVolume, weight },
-      {
-        capacityMode: capacityMode.value,
-        volumeCapacity: truckVolume.value,
-        weightCapacity: truckWeight.value,
-      }
-    );
+    const job = buildJob(shape);
+    const result = Calc.calculateJob(job);
+    const section = result.sections[0];
+    const truckResult = result.totals.trucks;
+    const price = result.totals.price;
+    const gstExact = result.totals.gst.exact;
+    const gstRounded = result.totals.gst.rounded;
     const roundedText = truckResult.rounded !== truckResult.exact
       ? ` (${truckResult.rounded} rounded)`
       : "";
@@ -204,20 +217,20 @@
     applyLayout(shape);
 
     if (shape !== "manualVolume") {
-      areaOutput.textContent = `${format(result.area)} m²`;
+      areaOutput.textContent = `${format(section.area)} m²`;
       shapeLabel.textContent = shapeLabelFor(shape);
-      areaFormula.textContent = buildAreaFormula(section, result, shape);
+      areaFormula.textContent = buildAreaFormula(job.sections[0], section, shape);
     }
 
-    volumeOutput.textContent = `${format(result.volume)} m³`;
+    volumeOutput.textContent = `${format(section.volume)} m³`;
 
     if (shape === "manualVolume") {
       depthNote.textContent = "Manual volume entered";
       depthNote.classList.remove("warn");
-    } else if (result.needsDepth) {
+    } else if (section.needsDepth) {
       depthNote.textContent = "Depth needed for volume";
       depthNote.classList.add("warn");
-    } else if (result.area <= 0) {
+    } else if (section.area <= 0) {
       depthNote.textContent = "Enter valid dimensions";
       depthNote.classList.add("warn");
     } else {
@@ -225,7 +238,7 @@
       depthNote.classList.remove("warn");
     }
 
-    volumeFormula.textContent = buildVolumeFormula(section, result, shape);
+    volumeFormula.textContent = buildVolumeFormula(job.sections[0], section, shape);
 
     trucksOutput.textContent = `${format(truckResult.exact)} trucks${roundedText}`;
     limitOutput.textContent = truckResult.limit === "volume"
@@ -233,11 +246,11 @@
       : truckResult.limit === "weight"
         ? "Limited by weight"
         : "Enter a truck capacity";
-    truckFormulaOutput.textContent = buildTruckFormula(looseVolume, weight, truckResult);
-
-    const price = Calc.calculatePrice(truckResult.exact, priceInput.value);
-    const gstExact = Calc.applyGst(price.exact, gstMode.value, gstRate.value);
-    const gstRounded = Calc.applyGst(price.rounded, gstMode.value, gstRate.value);
+    truckFormulaOutput.textContent = buildTruckFormula(
+      section.looseVolume,
+      section.weight,
+      truckResult
+    );
 
     priceExactOutput.textContent = `${money(gstExact.total)} exact`;
     priceRoundedOutput.textContent = `${money(gstRounded.total)} rounded`;
@@ -249,6 +262,11 @@
       const label = gstMode.value === "add" ? "added" : "included";
       gstFormulaOutput.textContent = `GST ${display(gstRate.value)}% ${label}: ${money(gstExact.gst)} exact · ${money(gstRounded.gst)} rounded`;
     }
+
+    warningsBox.hidden = result.warnings.length === 0;
+    warningsOutput.textContent = result.warnings
+      .map((warning) => warning.message)
+      .join("\n");
   }
 
   for (const element of sandbox.querySelectorAll("input, select")) {

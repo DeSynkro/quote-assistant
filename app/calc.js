@@ -168,6 +168,141 @@
     return { total: value, gst };
   }
 
+  function sectionName(section, index) {
+    const name = section && section.name ? String(section.name).trim() : "";
+    return name || `Section ${index + 1}`;
+  }
+
+  function calculateJob(job) {
+    const source = job || {};
+    const sections = Array.isArray(source.sections) ? source.sections : [];
+    const truck = source.truck || {};
+    const swell = source.swell || { enabled: false, percent: 0 };
+    const gst = source.gst || { mode: "none", rate: 0 };
+    const warnings = [];
+    const results = [];
+    let totalInGround = 0;
+    let totalLoose = 0;
+    let totalWeight = 0;
+    let weightKnown = sections.length > 0;
+
+    if (sections.length === 0) {
+      warnings.push({
+        code: "no-sections",
+        message: "Add at least one section.",
+      });
+    }
+
+    for (let index = 0; index < sections.length; index += 1) {
+      const section = sections[index] || {};
+      const name = sectionName(section, index);
+      const volume = sectionVolume(section);
+      const looseVolume = applySwell(
+        volume.volume,
+        swell.enabled,
+        swell.percent
+      );
+      const density = positiveNumber(
+        section.material && section.material.looseDensity
+      );
+      const weight = density !== null ? looseVolume * density : null;
+
+      if (volume.needsDepth) {
+        warnings.push({
+          code: "missing-depth",
+          message: `${name} needs a depth before volume can be calculated.`,
+          sectionIndex: index,
+        });
+      } else if (volume.volume <= 0) {
+        warnings.push({
+          code: "zero-volume",
+          message: `${name} has no volume.`,
+          sectionIndex: index,
+        });
+      }
+
+      if (weight === null) {
+        weightKnown = false;
+      } else {
+        totalWeight += weight;
+      }
+
+      totalInGround += volume.volume;
+      totalLoose += looseVolume;
+
+      results.push({
+        index,
+        name,
+        shape: volume.shape,
+        area: volume.area,
+        volume: volume.volume,
+        looseVolume,
+        weight,
+        needsDepth: volume.needsDepth,
+      });
+    }
+
+    if (!weightKnown) {
+      totalWeight = null;
+    }
+
+    const mode = truck.capacityMode === "volume"
+      || truck.capacityMode === "weight"
+      || truck.capacityMode === "both"
+      ? truck.capacityMode
+      : "both";
+    const volumeCapacity = positiveNumber(truck.volumeCapacity);
+    const weightCapacity = positiveNumber(truck.weightCapacity);
+    const weightNeeded = mode !== "volume";
+    const capacityAvailable = mode === "volume"
+      ? volumeCapacity !== null
+      : mode === "weight"
+        ? weightCapacity !== null
+        : volumeCapacity !== null || weightCapacity !== null;
+
+    if (!capacityAvailable) {
+      warnings.push({
+        code: "missing-truck-capacity",
+        message: "Add a truck capacity to calculate loads.",
+      });
+    }
+
+    if (weightNeeded && !weightKnown) {
+      warnings.push({
+        code: "unknown-weight",
+        message: "Weight is unknown because not every section has a material density.",
+      });
+    }
+
+    const loads = truckLoads(
+      { volume: totalLoose, weight: weightKnown ? totalWeight : null },
+      {
+        capacityMode: mode,
+        volumeCapacity,
+        weightCapacity,
+      }
+    );
+    const price = calculatePrice(loads.exact, source.pricePerTruck);
+    const gstExact = applyGst(price.exact, gst.mode, gst.rate);
+    const gstRounded = applyGst(price.rounded, gst.mode, gst.rate);
+
+    return {
+      sections: results,
+      totals: {
+        volumeInGround: totalInGround,
+        volumeLoose: totalLoose,
+        weight: weightKnown ? totalWeight : null,
+        trucks: loads,
+        price,
+        gst: {
+          exact: gstExact,
+          rounded: gstRounded,
+        },
+      },
+      warnings,
+    };
+  }
+
   return {
     UNIT_TO_M,
     toMetres,
@@ -176,5 +311,6 @@
     truckLoads,
     calculatePrice,
     applyGst,
+    calculateJob,
   };
 });

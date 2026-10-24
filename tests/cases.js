@@ -20,6 +20,45 @@
   }
 
   function createCases(Calc) {
+    function sampleJob() {
+      return {
+        sections: [
+          {
+            shape: "rectangle",
+            width: 10,
+            widthUnit: "m",
+            length: 3,
+            lengthUnit: "m",
+            depth: 100,
+            depthUnit: "mm",
+          },
+          {
+            shape: "rectangle",
+            width: 5,
+            widthUnit: "m",
+            length: 5,
+            lengthUnit: "m",
+            depth: 200,
+            depthUnit: "mm",
+          },
+        ],
+        truck: {
+          capacityMode: "volume",
+          volumeCapacity: 6.5,
+          weightCapacity: 8,
+        },
+        swell: {
+          enabled: true,
+          percent: 30,
+        },
+        pricePerTruck: 800,
+        gst: {
+          mode: "none",
+          rate: 10,
+        },
+      };
+    }
+
     return [
       {
         name: "converts metres to metres",
@@ -408,6 +447,202 @@
           const result = Calc.applyGst(-10, "add", 10);
           closeTo(result.total, 0, "total");
           closeTo(result.gst, 0, "gst");
+        },
+      },
+      {
+        name: "calculates a complete job",
+        run() {
+          const result = Calc.calculateJob(sampleJob());
+          equal(result.sections.length, 2, "sections");
+          closeTo(result.totals.volumeInGround, 8, "volume in ground");
+          closeTo(result.totals.volumeLoose, 10.4, "loose volume");
+          closeTo(result.totals.trucks.exact, 1.6, "exact trucks");
+          equal(result.totals.trucks.rounded, 2, "rounded trucks");
+          closeTo(result.totals.price.exact, 1280, "exact price");
+          closeTo(result.totals.price.rounded, 1600, "rounded price");
+          closeTo(result.totals.gst.exact.total, 1280, "exact total");
+          closeTo(result.totals.gst.rounded.total, 1600, "rounded total");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "combines uneven ends and rectangle sections",
+        run() {
+          const job = sampleJob();
+          job.sections = [
+            {
+              shape: "unevenEnds",
+              width: 11,
+              widthUnit: "m",
+              leftLength: 7,
+              leftLengthUnit: "m",
+              rightLength: 3,
+              rightLengthUnit: "m",
+              depth: 100,
+              depthUnit: "mm",
+            },
+            {
+              shape: "rectangle",
+              width: 5,
+              widthUnit: "m",
+              length: 5,
+              lengthUnit: "m",
+              depth: 200,
+              depthUnit: "mm",
+            },
+          ];
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.volumeInGround, 10.5, "volume in ground");
+          closeTo(result.totals.volumeLoose, 13.65, "loose volume");
+          closeTo(result.totals.trucks.exact, 2.1, "exact trucks");
+          equal(result.totals.trucks.rounded, 3, "rounded trucks");
+          closeTo(result.totals.price.exact, 1680, "exact price");
+          closeTo(result.totals.price.rounded, 2400, "rounded price");
+        },
+      },
+      {
+        name: "uses weight when every section has a density",
+        run() {
+          const job = sampleJob();
+          job.truck.capacityMode = "both";
+          job.sections[0].material = { looseDensity: 1.5 };
+          job.sections[1].material = { looseDensity: 1.5 };
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.weight, 15.6, "weight");
+          closeTo(result.totals.trucks.byVolume, 1.6, "by volume");
+          closeTo(result.totals.trucks.byWeight, 1.95, "by weight");
+          closeTo(result.totals.trucks.exact, 1.95, "exact trucks");
+          equal(result.totals.trucks.limit, "weight", "limit");
+          equal(result.warnings.length, 0, "warnings");
+        },
+      },
+      {
+        name: "warns when weight is unknown",
+        run() {
+          const job = sampleJob();
+          job.truck.capacityMode = "both";
+          const result = Calc.calculateJob(job);
+          equal(result.totals.weight, null, "weight");
+          closeTo(result.totals.trucks.exact, 1.6, "exact trucks");
+          equal(result.totals.trucks.limit, "volume", "limit");
+          equal(
+            result.warnings.some((warning) => warning.code === "unknown-weight"),
+            true,
+            "unknown weight warning"
+          );
+        },
+      },
+      {
+        name: "warns when only some sections have a density",
+        run() {
+          const job = sampleJob();
+          job.truck.capacityMode = "both";
+          job.sections[0].material = { looseDensity: 1.5 };
+          const result = Calc.calculateJob(job);
+          equal(result.totals.weight, null, "weight");
+          equal(
+            result.warnings.some((warning) => warning.code === "unknown-weight"),
+            true,
+            "unknown weight warning"
+          );
+        },
+      },
+      {
+        name: "returns zero trucks in weight mode when weight is unknown",
+        run() {
+          const job = sampleJob();
+          job.truck.capacityMode = "weight";
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.trucks.exact, 0, "exact trucks");
+          equal(
+            result.warnings.some((warning) => warning.code === "unknown-weight"),
+            true,
+            "unknown weight warning"
+          );
+        },
+      },
+      {
+        name: "warns when truck capacity is missing",
+        run() {
+          const job = sampleJob();
+          job.truck = {};
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.trucks.exact, 0, "exact trucks");
+          closeTo(result.totals.price.exact, 0, "exact price");
+          equal(
+            result.warnings.some((warning) => warning.code === "missing-truck-capacity"),
+            true,
+            "missing capacity warning"
+          );
+        },
+      },
+      {
+        name: "keeps area and warns when a section depth is missing",
+        run() {
+          const job = sampleJob();
+          delete job.sections[0].depth;
+          const result = Calc.calculateJob(job);
+          closeTo(result.sections[0].area, 30, "area");
+          closeTo(result.sections[0].volume, 0, "volume");
+          equal(result.sections[0].needsDepth, true, "needs depth");
+          equal(
+            result.warnings.some((warning) => warning.code === "missing-depth"),
+            true,
+            "missing depth warning"
+          );
+        },
+      },
+      {
+        name: "warns about a zero-volume section",
+        run() {
+          const job = sampleJob();
+          job.sections[0].width = 0;
+          const result = Calc.calculateJob(job);
+          equal(
+            result.warnings.some((warning) => warning.code === "zero-volume"),
+            true,
+            "zero volume warning"
+          );
+        },
+      },
+      {
+        name: "warns when there are no sections",
+        run() {
+          const job = sampleJob();
+          job.sections = [];
+          const result = Calc.calculateJob(job);
+          equal(result.sections.length, 0, "sections");
+          closeTo(result.totals.volumeInGround, 0, "volume in ground");
+          equal(result.totals.weight, null, "weight");
+          equal(
+            result.warnings.some((warning) => warning.code === "no-sections"),
+            true,
+            "no sections warning"
+          );
+        },
+      },
+      {
+        name: "applies added GST to exact and rounded totals",
+        run() {
+          const job = sampleJob();
+          job.gst = { mode: "add", rate: 10 };
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.gst.exact.total, 1408, "exact total");
+          closeTo(result.totals.gst.exact.gst, 128, "exact gst");
+          closeTo(result.totals.gst.rounded.total, 1760, "rounded total");
+          closeTo(result.totals.gst.rounded.gst, 160, "rounded gst");
+        },
+      },
+      {
+        name: "extracts included GST from exact and rounded totals",
+        run() {
+          const job = sampleJob();
+          job.gst = { mode: "included", rate: 10 };
+          const result = Calc.calculateJob(job);
+          closeTo(result.totals.gst.exact.total, 1280, "exact total");
+          closeTo(result.totals.gst.exact.gst, 1280 - 1280 / 1.1, "exact gst");
+          closeTo(result.totals.gst.rounded.total, 1600, "rounded total");
+          closeTo(result.totals.gst.rounded.gst, 1600 - 1600 / 1.1, "rounded gst");
         },
       },
     ];

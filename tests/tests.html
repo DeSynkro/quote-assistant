@@ -228,6 +228,13 @@
     font-size: 12px;
   }
 
+  .warnings {
+    margin-top: 6px;
+    color: #f2b84b;
+    font-size: 12px;
+    white-space: pre-line;
+  }
+
   #summary {
     display: inline-block;
     margin-bottom: 18px;
@@ -411,6 +418,18 @@
       </label>
     </div>
 
+    <div class="fields one">
+      <label class="field">
+        <span>Material density (optional)</span>
+        <span class="input-row">
+          <input id="sandbox-density" type="number" inputmode="decimal" step="any" placeholder="Leave blank for volume only">
+          <select aria-label="Density unit">
+            <option>t/m³</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
     <div class="result-box" aria-live="polite" id="sandbox-area-box">
       <div class="result-label">Area</div>
       <div class="result-value" id="sandbox-area">30 m²</div>
@@ -471,18 +490,6 @@
       </label>
     </div>
 
-    <div class="fields one">
-      <label class="field">
-        <span>Load weight (optional)</span>
-        <span class="input-row">
-          <input id="sandbox-load-weight" type="number" inputmode="decimal" step="any" placeholder="Leave blank if unknown">
-          <select aria-label="Load weight unit">
-            <option>t</option>
-          </select>
-        </span>
-      </label>
-    </div>
-
     <div class="result-box" aria-live="polite">
       <div class="result-label">Truck loads</div>
       <div class="result-value" id="sandbox-trucks">0 trucks</div>
@@ -531,6 +538,11 @@
       <div class="result-source" id="sandbox-price-rounded">$1,600 rounded</div>
       <div class="formula" id="sandbox-price-formula">1.6 × $800 = $1,280 exact · 2 × $800 = $1,600 rounded</div>
       <div class="formula" id="sandbox-gst-formula">GST: none</div>
+    </div>
+
+    <div class="result-box" id="sandbox-warnings-box" hidden>
+      <div class="result-label">Warnings</div>
+      <div class="warnings" id="sandbox-warnings"></div>
     </div>
   </section>
 
