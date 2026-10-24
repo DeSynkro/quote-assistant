@@ -489,6 +489,49 @@
       <div class="result-source" id="sandbox-limit">Enter a truck capacity</div>
       <div class="formula" id="sandbox-truck-formula">No load calculation yet</div>
     </div>
+
+    <h3 class="subhead">Price</h3>
+    <p>Uses the exact and rounded truck counts above.</p>
+
+    <div class="fields">
+      <label class="field">
+        <span>Price per truck</span>
+        <span class="input-row">
+          <input id="sandbox-price" type="number" inputmode="decimal" step="any" value="800">
+          <select aria-label="Price currency">
+            <option>$</option>
+          </select>
+        </span>
+      </label>
+      <label class="field">
+        <span>GST</span>
+        <select id="sandbox-gst-mode">
+          <option value="none">No GST</option>
+          <option value="add">Add GST</option>
+          <option value="included">GST included</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="fields one">
+      <label class="field">
+        <span>GST rate</span>
+        <span class="input-row">
+          <input id="sandbox-gst-rate" type="number" inputmode="decimal" step="any" value="10">
+          <select aria-label="GST rate unit">
+            <option>%</option>
+          </select>
+        </span>
+      </label>
+    </div>
+
+    <div class="result-box" aria-live="polite">
+      <div class="result-label">Charge</div>
+      <div class="result-value" id="sandbox-price-exact">$1,280 exact</div>
+      <div class="result-source" id="sandbox-price-rounded">$1,600 rounded</div>
+      <div class="formula" id="sandbox-price-formula">1.6 × $800 = $1,280 exact · 2 × $800 = $1,600 rounded</div>
+      <div class="formula" id="sandbox-gst-formula">GST: none</div>
+    </div>
   </section>
 
   <h2>Automated checks</h2>

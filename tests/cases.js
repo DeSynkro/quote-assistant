@@ -335,6 +335,81 @@
           equal(result.byWeight, null, "by weight");
         },
       },
+      {
+        name: "calculates exact and rounded prices",
+        run() {
+          const result = Calc.calculatePrice(1.6, 800);
+          closeTo(result.exact, 1280, "exact price");
+          closeTo(result.rounded, 1600, "rounded price");
+          closeTo(result.exactTrucks, 1.6, "exact trucks");
+          equal(result.roundedTrucks, 2, "rounded trucks");
+        },
+      },
+      {
+        name: "rounds any fractional truck price up",
+        run() {
+          const result = Calc.calculatePrice(3.01, 100);
+          closeTo(result.exact, 301, "exact price");
+          closeTo(result.rounded, 400, "rounded price");
+          equal(result.roundedTrucks, 4, "rounded trucks");
+        },
+      },
+      {
+        name: "returns zero for zero trucks",
+        run() {
+          const result = Calc.calculatePrice(0, 800);
+          closeTo(result.exact, 0, "exact price");
+          closeTo(result.rounded, 0, "rounded price");
+        },
+      },
+      {
+        name: "returns zero for an invalid price",
+        run() {
+          const result = Calc.calculatePrice(1.6, "bad");
+          closeTo(result.exact, 0, "exact price");
+          closeTo(result.rounded, 0, "rounded price");
+        },
+      },
+      {
+        name: "leaves the amount unchanged with no GST",
+        run() {
+          const result = Calc.applyGst(1280, "none", 10);
+          closeTo(result.total, 1280, "total");
+          closeTo(result.gst, 0, "gst");
+        },
+      },
+      {
+        name: "adds GST on top",
+        run() {
+          const result = Calc.applyGst(1280, "add", 10);
+          closeTo(result.total, 1408, "total");
+          closeTo(result.gst, 128, "gst");
+        },
+      },
+      {
+        name: "extracts GST from an included price",
+        run() {
+          const result = Calc.applyGst(1100, "included", 10);
+          closeTo(result.total, 1100, "total");
+          closeTo(result.gst, 100, "gst");
+        },
+      },
+      {
+        name: "ignores an invalid GST mode",
+        run() {
+          const result = Calc.applyGst(1280, "weird", 10);
+          closeTo(result.total, 1280, "total");
+          closeTo(result.gst, 0, "gst");
+        },
+      },
+      {
+        name: "returns zero for a negative GST amount",
+        run() {
+          const result = Calc.applyGst(-10, "add", 10);
+          closeTo(result.total, 0, "total");
+          closeTo(result.gst, 0, "gst");
+        },
+      },
     ];
   }
 

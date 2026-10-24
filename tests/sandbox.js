@@ -40,11 +40,28 @@
   const trucksOutput = document.getElementById("sandbox-trucks");
   const limitOutput = document.getElementById("sandbox-limit");
   const truckFormulaOutput = document.getElementById("sandbox-truck-formula");
+  const priceInput = document.getElementById("sandbox-price");
+  const gstMode = document.getElementById("sandbox-gst-mode");
+  const gstRate = document.getElementById("sandbox-gst-rate");
+  const priceExactOutput = document.getElementById("sandbox-price-exact");
+  const priceRoundedOutput = document.getElementById("sandbox-price-rounded");
+  const priceFormulaOutput = document.getElementById("sandbox-price-formula");
+  const gstFormulaOutput = document.getElementById("sandbox-gst-formula");
 
   function format(value) {
     return new Intl.NumberFormat(undefined, {
       maximumFractionDigits: 3,
     }).format(value);
+  }
+
+  function money(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return "$0";
+    }
+    return `$${new Intl.NumberFormat(undefined, {
+      maximumFractionDigits: 2,
+    }).format(number)}`;
   }
 
   function display(value) {
@@ -217,6 +234,21 @@
         ? "Limited by weight"
         : "Enter a truck capacity";
     truckFormulaOutput.textContent = buildTruckFormula(looseVolume, weight, truckResult);
+
+    const price = Calc.calculatePrice(truckResult.exact, priceInput.value);
+    const gstExact = Calc.applyGst(price.exact, gstMode.value, gstRate.value);
+    const gstRounded = Calc.applyGst(price.rounded, gstMode.value, gstRate.value);
+
+    priceExactOutput.textContent = `${money(gstExact.total)} exact`;
+    priceRoundedOutput.textContent = `${money(gstRounded.total)} rounded`;
+    priceFormulaOutput.textContent = `${format(price.exactTrucks)} × ${money(priceInput.value)} = ${money(price.exact)} exact · ${price.roundedTrucks} × ${money(priceInput.value)} = ${money(price.rounded)} rounded`;
+
+    if (gstMode.value === "none") {
+      gstFormulaOutput.textContent = "GST: none";
+    } else {
+      const label = gstMode.value === "add" ? "added" : "included";
+      gstFormulaOutput.textContent = `GST ${display(gstRate.value)}% ${label}: ${money(gstExact.gst)} exact · ${money(gstRounded.gst)} rounded`;
+    }
   }
 
   for (const element of sandbox.querySelectorAll("input, select")) {

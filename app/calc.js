@@ -129,11 +129,52 @@
     };
   }
 
+  function calculatePrice(trucks, pricePerTruck) {
+    const count = Number(trucks);
+    const rate = Number(pricePerTruck);
+    const exactTrucks = Number.isFinite(count) && count > 0 ? count : 0;
+    const roundedTrucks = Math.ceil(exactTrucks);
+    const price = Number.isFinite(rate) && rate > 0 ? rate : 0;
+
+    return {
+      exact: exactTrucks * price,
+      rounded: roundedTrucks * price,
+      exactTrucks,
+      roundedTrucks,
+    };
+  }
+
+  function applyGst(amount, mode, rate) {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value < 0) {
+      return { total: 0, gst: 0 };
+    }
+
+    if (mode !== "add" && mode !== "included") {
+      return { total: value, gst: 0 };
+    }
+
+    const gstRate = Number(rate);
+    if (!Number.isFinite(gstRate) || gstRate < 0) {
+      return { total: value, gst: 0 };
+    }
+
+    if (mode === "add") {
+      const gst = value * gstRate / 100;
+      return { total: value + gst, gst };
+    }
+
+    const gst = value - value / (1 + gstRate / 100);
+    return { total: value, gst };
+  }
+
   return {
     UNIT_TO_M,
     toMetres,
     sectionVolume,
     applySwell,
     truckLoads,
+    calculatePrice,
+    applyGst,
   };
 });
