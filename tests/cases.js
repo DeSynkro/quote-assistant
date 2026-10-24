@@ -66,7 +66,6 @@
         amountBasis: "volume",
         amount: 10,
         price: 45,
-        density: 1.5,
         deliveryMode: "truckRate",
         customFee: "",
         addSettling: false,
@@ -685,14 +684,14 @@
             800
           );
           closeTo(result.deliveredVolume, 10, "delivered volume");
-          closeTo(result.weight, 15, "weight");
+          equal(result.weight, null, "weight");
           closeTo(result.materialCost, 450, "material cost");
-          closeTo(result.trucks.exact, 1.875, "exact trucks");
+          closeTo(result.trucks.exact, 10 / 6.5, "exact trucks");
           equal(result.trucks.rounded, 2, "rounded trucks");
-          equal(result.trucks.limit, "weight", "limit");
-          closeTo(result.tripCost.exact, 1500, "exact trip cost");
+          equal(result.trucks.limit, "volume", "limit");
+          closeTo(result.tripCost.exact, (10 / 6.5) * 800, "exact trip cost");
           closeTo(result.tripCost.rounded, 1600, "rounded trip cost");
-          closeTo(result.total.exact, 1950, "exact total");
+          closeTo(result.total.exact, 450 + (10 / 6.5) * 800, "exact total");
           closeTo(result.total.rounded, 2050, "rounded total");
           equal(result.warnings.length, 0, "warnings");
         },
@@ -707,7 +706,6 @@
           );
           closeTo(result.finishedVolume, 10, "finished volume");
           closeTo(result.deliveredVolume, 11, "delivered volume");
-          closeTo(result.weight, 16.5, "weight");
           closeTo(result.materialCost, 495, "material cost");
         },
       },
@@ -731,7 +729,6 @@
           );
           closeTo(result.finishedVolume, 5, "finished volume");
           closeTo(result.deliveredVolume, 5.5, "delivered volume");
-          closeTo(result.weight, 8.25, "weight");
           closeTo(result.materialCost, 247.5, "material cost");
         },
       },
@@ -744,7 +741,10 @@
             800
           );
           closeTo(result.weight, 10, "weight");
-          closeTo(result.deliveredVolume, 10 / 1.5, "delivered volume");
+          equal(result.deliveredVolume, null, "delivered volume");
+          closeTo(result.trucks.exact, 1.25, "exact trucks");
+          equal(result.trucks.rounded, 2, "rounded trucks");
+          equal(result.trucks.limit, "weight", "limit");
           closeTo(result.materialCost, 800, "material cost");
         },
       },
@@ -756,7 +756,6 @@
               amountBasis: "weight",
               amount: 8,
               price: 118.75,
-              density: undefined,
             }),
             { capacityMode: "volume", volumeCapacity: 6.5, weightCapacity: 8 },
             800
@@ -768,17 +767,46 @@
         },
       },
       {
-        name: "uses a custom delivery fee",
+        name: "charges a custom delivery fee per truck",
         run() {
           const result = Calc.calculateDelivery(
             sampleDelivery({ deliveryMode: "custom", customFee: 500 }),
             { capacityMode: "volume", volumeCapacity: 6.5 },
             800
           );
-          closeTo(result.tripCost.exact, 500, "exact trip cost");
-          closeTo(result.tripCost.rounded, 500, "rounded trip cost");
-          closeTo(result.total.exact, 950, "exact total");
-          closeTo(result.total.rounded, 950, "rounded total");
+          closeTo(result.tripCost.exact, (10 / 6.5) * 500, "exact trip cost");
+          closeTo(result.tripCost.rounded, 1000, "rounded trip cost");
+          closeTo(result.total.exact, 450 + (10 / 6.5) * 500, "exact total");
+          closeTo(result.total.rounded, 1450, "rounded total");
+        },
+      },
+      {
+        name: "adds another custom fee when delivery needs another truck",
+        run() {
+          const low = Calc.calculateDelivery(
+            sampleDelivery({
+              amount: 4,
+              price: 79,
+              deliveryMode: "custom",
+              customFee: 150,
+            }),
+            { capacityMode: "volume", volumeCapacity: 6.5, weightCapacity: 8 },
+            800
+          );
+          const high = Calc.calculateDelivery(
+            sampleDelivery({
+              amount: 10,
+              price: 79,
+              deliveryMode: "custom",
+              customFee: 150,
+            }),
+            { capacityMode: "volume", volumeCapacity: 6.5, weightCapacity: 8 },
+            800
+          );
+          equal(low.trucks.rounded, 1, "low truck count");
+          equal(high.trucks.rounded, 2, "high truck count");
+          closeTo(low.tripCost.rounded, 150, "low trip cost");
+          closeTo(high.tripCost.rounded, 300, "high trip cost");
         },
       },
       {
@@ -830,22 +858,6 @@
         },
       },
       {
-        name: "warns when delivery weight is unknown",
-        run() {
-          const result = Calc.calculateDelivery(
-            sampleDelivery({ density: undefined }),
-            { capacityMode: "both", volumeCapacity: 6.5, weightCapacity: 8 },
-            800
-          );
-          equal(result.weight, null, "weight");
-          equal(
-            result.warnings.some((warning) => warning.code === "material-weight-unknown"),
-            true,
-            "unknown weight warning"
-          );
-        },
-      },
-      {
         name: "warns when a weight-based delivery has no usable truck capacity",
         run() {
           const result = Calc.calculateDelivery(
@@ -873,11 +885,11 @@
           job.delivery = sampleDelivery();
           const result = Calc.calculateJob(job);
           closeTo(result.totals.delivery.materialCost, 450, "material cost");
-          closeTo(result.totals.delivery.total.exact, 1950, "delivery exact");
+          closeTo(result.totals.delivery.total.exact, 450 + (10 / 6.5) * 800, "delivery exact");
           closeTo(result.totals.delivery.total.rounded, 2050, "delivery rounded");
-          closeTo(result.totals.combined.trucks.exact, 3.475, "combined exact trucks");
+          closeTo(result.totals.combined.trucks.exact, 1.6 + 10 / 6.5, "combined exact trucks");
           equal(result.totals.combined.trucks.rounded, 4, "combined rounded trucks");
-          closeTo(result.totals.combined.price.exact, 3230, "combined exact price");
+          closeTo(result.totals.combined.price.exact, 1280 + 450 + (10 / 6.5) * 800, "combined exact price");
           closeTo(result.totals.combined.price.rounded, 3650, "combined rounded price");
           equal(result.warnings.length, 0, "warnings");
         },
@@ -886,12 +898,11 @@
         name: "applies GST to the combined job total",
         run() {
           const job = sampleJob();
-          job.truck.capacityMode = "both";
           job.delivery = sampleDelivery();
           job.gst = { mode: "add", rate: 10 };
           const result = Calc.calculateJob(job);
-          closeTo(result.totals.combined.gst.exact.total, 3553, "combined exact total");
-          closeTo(result.totals.combined.gst.exact.gst, 323, "combined exact gst");
+          closeTo(result.totals.combined.gst.exact.total, (1280 + 450 + (10 / 6.5) * 800) * 1.1, "combined exact total");
+          closeTo(result.totals.combined.gst.exact.gst, (1280 + 450 + (10 / 6.5) * 800) * 0.1, "combined exact gst");
           closeTo(result.totals.combined.gst.rounded.total, 4015, "combined rounded total");
           closeTo(result.totals.combined.gst.rounded.gst, 365, "combined rounded gst");
         },
@@ -1051,16 +1062,15 @@
         name: "uses combined spoil and delivery trips for travel",
         run() {
           const job = sampleJob();
-          job.truck.capacityMode = "both";
           job.truck.fuelConsumption = "8";
           job.delivery = sampleDelivery();
           job.travel = sampleTravel();
           const result = Calc.calculateJob(job);
-          closeTo(result.totals.combined.trucks.exact, 3.475, "combined exact trucks");
+          closeTo(result.totals.combined.trucks.exact, 1.6 + 10 / 6.5, "combined exact trucks");
           equal(result.totals.combined.trucks.rounded, 4, "combined rounded trucks");
           closeTo(result.totals.travel.cost.exact, 40, "travel exact");
           closeTo(result.totals.travel.cost.rounded, 40, "travel rounded");
-          closeTo(result.totals.combined.price.exact, 3270, "combined exact price");
+          closeTo(result.totals.combined.price.exact, 1280 + 450 + (10 / 6.5) * 800 + 40, "combined exact price");
           closeTo(result.totals.combined.price.rounded, 3690, "combined rounded price");
         },
       },

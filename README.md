@@ -49,7 +49,7 @@ The calculation engine and estimator UI are working. Open `app/index.html` direc
 
 ## Still planned
 
-- Material presets with density, swell and settling values
+- Material presets with default prices, swell and settling values
 - Uneven fill areas and multiple material entries
 - Offline native apps for Windows, Linux and Android
 - Shared job list for Docker users on the same LAN

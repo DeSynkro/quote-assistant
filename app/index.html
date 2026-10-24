@@ -238,19 +238,12 @@
           </label>
         </div>
 
-        <div class="fields">
+        <div class="fields one">
           <label class="field">
             <span>Material price</span>
             <span class="with-unit">
               <input id="delivery-price" data-delivery-field="price" type="number" inputmode="decimal" step="any" placeholder="0">
               <span class="unit" id="delivery-price-unit">/ m³</span>
-            </span>
-          </label>
-          <label class="field">
-            <span>Density (optional)</span>
-            <span class="with-unit">
-              <input id="delivery-density" data-delivery-field="density" type="number" inputmode="decimal" step="any" placeholder="For weight limits">
-              <span class="unit">t/m³</span>
             </span>
           </label>
         </div>
@@ -259,13 +252,13 @@
           <label class="field">
             <span>Delivery pricing</span>
             <select id="delivery-mode" data-delivery-field="deliveryMode">
-              <option value="custom">Custom delivery fee</option>
+              <option value="custom">Custom fee per truck</option>
               <option value="truckRate">Use main truck rate</option>
               <option value="included">Included in material price</option>
             </select>
           </label>
           <label class="field" id="delivery-custom-fee-field" hidden>
-            <span>Custom delivery fee</span>
+            <span>Custom fee per truck</span>
             <span class="with-unit">
               <input id="delivery-custom-fee" data-delivery-field="customFee" type="number" inputmode="decimal" step="any" placeholder="0">
               <span class="unit">$</span>
@@ -274,7 +267,7 @@
         </div>
 
         <div class="footnote">Area × depth uses a rectangle. Use direct volume for irregular fill areas.</div>
-        <div class="footnote">Delivery checks the capacity that matches the material amount and uses the same truck capacities. Spoil and delivery trips are calculated separately.</div>
+        <div class="footnote">Delivery checks the capacity that matches the material amount and uses the same truck capacities. Spoil and delivery trips are calculated separately. A custom fee is charged for each delivery truck.</div>
       </div>
 
       <div class="card">

@@ -99,14 +99,11 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - For L-shapes and other complex outlines, split the area into multiple sections
   or use manual area.
 
-### Materials and density
+### Materials
 - Spoil is volume-only in the current UI.
-- Section material density is not exposed; the engine still supports it for
-  possible future use.
-- Material In has its own density field for delivery weight checks.
-- Material presets are still planned. Presets will carry loose bulk density,
-  swell %, and (for rubble) a voids %.
-- Concrete removal needs void/air-gap handling, not just solid density.
+- Material In uses volume for volume and area amounts, and weight for direct
+  weight amounts.
+- Material presets are still planned for names and default prices.
 
 ### Swell / bulking
 - Excavated material expands; in-ground volume is not truck volume.
@@ -142,16 +139,15 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   the allowance. Area × depth always applies it.
 - Direct weight is entered in tonnes and has no settling allowance.
 - Material price is per m³ for volume and area, and per tonne for weight.
-- Optional density is used for weight limits and unit conversion.
-- Delivery uses the capacity that matches the material amount: weight for direct
-  weight, volume for volume and area, and both when density makes both known.
-  This is independent of the spoil capacity mode.
+- Delivery uses volume capacity for volume and area amounts, and weight capacity
+  for direct weight. This is independent of the spoil capacity mode.
 - Delivery pricing options:
-  - Custom delivery fee (default).
+  - Custom fee per truck (default).
   - Use the main truck rate.
   - Delivery included in the material price.
-- A custom delivery fee overrides the calculated delivery trip cost only. The
-  material cost stays separate.
+- A custom fee is charged per delivery truck and replaces the main truck rate
+  for delivery. The material cost stays separate. Set it to the truck rate, or
+  use "Use main truck rate" instead.
 - Spoil and delivery trips are treated as separate trips in v1.
 - Combined trucks are spoil trucks plus delivery trucks.
 - Combined price is spoil price plus material cost plus delivery trip cost.
@@ -286,7 +282,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Android only, or iOS eventually? (iOS builds require a macOS host; not possible
   from the current Linux setup.)
 - Currency assumed AUD (`$`). Confirm.
-- Real-world swell / voids / bulk-density numbers to seed the material presets.
+- Real-world swell and settling numbers to seed the material presets.
 - Should spoil and delivery trips be combinable, where the same truck can return
   with material? Currently they are separate trips.
 - Should fill areas support uneven ends and manual area, or is rectangle plus
@@ -296,7 +292,7 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - **Capacity margin**: a "comfortable fit" factor (default 90-95% of capacity) so
   the app leans toward an extra truck rather than an overloaded one.
 - **Material preset table**: topsoil, sand, gravel, crushed rock, clay, concrete
-  rubble - each with loose density, swell and voids, all editable.
+  rubble - each with a default price, swell and settling values, all editable.
 - **Autosave the current job** locally so an accidental close doesn't lose it.
 - **Job search / filter** once there are many saved jobs; show recent jobs on the
   start-up screen.

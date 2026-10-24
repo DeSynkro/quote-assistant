@@ -132,7 +132,6 @@
       depth: "",
       depthUnit: "mm",
       price: "",
-      density: "",
       deliveryMode: "custom",
       customFee: "",
     };
@@ -408,93 +407,64 @@
     update();
   }
 
-  function buildJob() {
-    const sections = state.sections.map((section) => {
-      const item = {
-        name: section.name,
-        shape: section.shape,
-      };
+  function buildCalcSection(section) {
+    const source = section || {};
+    const shape = source.shape || "rectangle";
+    const item = {
+      name: source.name,
+      shape,
+    };
 
-      if (section.shape === "manualVolume") {
-        item.manualVolume = section.manualVolume;
-      } else if (section.shape === "manualArea") {
-        item.area = section.area;
-        item.depth = section.depth;
-        item.depthUnit = section.depthUnit;
-      } else if (section.shape === "unevenEnds") {
-        item.width = section.unevenWidth;
-        item.widthUnit = section.unevenWidthUnit;
-        item.leftLength = section.leftLength;
-        item.leftLengthUnit = section.leftLengthUnit;
-        item.rightLength = section.rightLength;
-        item.rightLengthUnit = section.rightLengthUnit;
-        item.depth = section.depth;
-        item.depthUnit = section.depthUnit;
-      } else {
-        item.width = section.width;
-        item.widthUnit = section.widthUnit;
-        item.length = section.length;
-        item.lengthUnit = section.lengthUnit;
-        item.depth = section.depth;
-        item.depthUnit = section.depthUnit;
-      }
+    if (shape === "manualVolume") {
+      item.manualVolume = source.manualVolume;
+    } else if (shape === "manualArea") {
+      item.area = source.area;
+      item.depth = source.depth;
+      item.depthUnit = source.depthUnit;
+    } else if (shape === "unevenEnds") {
+      item.width = source.unevenWidth;
+      item.widthUnit = source.unevenWidthUnit;
+      item.leftLength = source.leftLength;
+      item.leftLengthUnit = source.leftLengthUnit;
+      item.rightLength = source.rightLength;
+      item.rightLengthUnit = source.rightLengthUnit;
+      item.depth = source.depth;
+      item.depthUnit = source.depthUnit;
+    } else {
+      item.width = source.width;
+      item.widthUnit = source.widthUnit;
+      item.length = source.length;
+      item.lengthUnit = source.lengthUnit;
+      item.depth = source.depth;
+      item.depthUnit = source.depthUnit;
+    }
 
-      return item;
-    });
+    return item;
+  }
+
+  function buildJobFromData(data) {
+    const source = data || {};
+    const sections = Array.isArray(source.sections) ? source.sections : [];
+    const truck = source.truck || createTruck();
 
     return {
-      sections,
+      sections: sections.map(buildCalcSection),
       truck: {
-        capacityMode: state.truck.capacityMode,
-        volumeCapacity: state.truck.volumeCapacity,
-        weightCapacity: state.truck.weightCapacity,
-        fuelConsumption: state.truck.fuelConsumption,
+        capacityMode: truck.capacityMode || "volume",
+        volumeCapacity: truck.volumeCapacity,
+        weightCapacity: truck.weightCapacity,
+        fuelConsumption: truck.fuelConsumption,
       },
-      swell: {
-        enabled: state.swell.enabled,
-        percent: state.swell.percent,
-      },
-      pricePerTruck: state.truck.pricePerTruck,
-      gst: {
-        mode: state.gst.mode,
-        rate: state.gst.rate,
-      },
-      delivery: state.delivery.enabled
-        ? {
-          enabled: true,
-          materialName: state.delivery.materialName,
-          amountBasis: state.delivery.amountBasis,
-          amount: state.delivery.amount,
-          addSettling: state.delivery.addSettling,
-          settlingPercent: state.delivery.settlingPercent,
-          width: state.delivery.width,
-          widthUnit: state.delivery.widthUnit,
-          length: state.delivery.length,
-          lengthUnit: state.delivery.lengthUnit,
-          depth: state.delivery.depth,
-          depthUnit: state.delivery.depthUnit,
-          price: state.delivery.price,
-          density: state.delivery.density,
-          deliveryMode: state.delivery.deliveryMode,
-          customFee: state.delivery.customFee,
-        }
-        : { enabled: false },
-      travel: state.travel.enabled
-        ? {
-          enabled: true,
-          distance: state.travel.distance,
-          useCalculatedTrips: state.travel.useCalculatedTrips,
-          manualTrips: state.travel.manualTrips,
-          roundTrip: state.travel.roundTrip,
-          usePricePerKm: state.travel.usePricePerKm,
-          pricePerKm: state.travel.pricePerKm,
-          useTruckFuel: state.travel.useTruckFuel,
-          manualFuel: state.travel.manualFuel,
-          includeDieselPrice: state.travel.includeDieselPrice,
-          dieselPrice: state.travel.dieselPrice,
-        }
-        : { enabled: false },
+      swell: source.swell || { enabled: false, percent: 0 },
+      pricePerTruck: truck.pricePerTruck,
+      gst: source.gst || { mode: "none", rate: 0 },
+      delivery: source.delivery || { enabled: false },
+      travel: source.travel || { enabled: false },
     };
+  }
+
+  function buildJob() {
+    return buildJobFromData(state);
   }
 
   function sectionFormula(section, resultSection) {
@@ -1227,6 +1197,7 @@
       ...createDelivery(),
       ...(source.delivery || {}),
     };
+    delete state.delivery.density;
     state.travel = {
       ...createTravel(),
       ...(source.travel || {}),
@@ -1277,6 +1248,18 @@
     );
   }
 
+  function jobSummaryText(job) {
+    try {
+      const result = Calc.calculateJob(buildJobFromData(job.data));
+      const hasExtras = Boolean(result.totals.delivery || result.totals.travel);
+      const final = hasExtras ? result.totals.combined : result.totals;
+      const count = final.trucks.rounded;
+      return `${format(count)} ${truckWord(count)} · ${money(final.gst.rounded.total)}`;
+    } catch (error) {
+      return job.summary || "No estimate";
+    }
+  }
+
   function renderSavedJobs() {
     savedJobsList.innerHTML = "";
 
@@ -1298,7 +1281,7 @@
       name.textContent = job.name;
       const meta = document.createElement("div");
       meta.className = "job-item-meta";
-      meta.textContent = `${formatSavedAt(job.savedAt)} · ${job.summary || "No estimate"}`;
+      meta.textContent = `${formatSavedAt(job.savedAt)} · ${jobSummaryText(job)}`;
       info.appendChild(name);
       info.appendChild(meta);
 

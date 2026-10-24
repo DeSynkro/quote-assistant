@@ -278,7 +278,6 @@
     const basis = source.amountBasis === "area" || source.amountBasis === "weight"
       ? source.amountBasis
       : "volume";
-    const density = positiveNumber(source.density);
     const price = Number(source.price);
     const priceValid = Number.isFinite(price) && price > 0;
     let finishedVolume = null;
@@ -307,9 +306,6 @@
       if (Number.isFinite(amount) && amount > 0) {
         weight = amount;
         amountValue = amount;
-        if (density !== null) {
-          deliveredVolume = amount / density;
-        }
       }
     } else {
       const amount = Number(source.amount);
@@ -329,10 +325,6 @@
       }
     }
 
-    if (deliveredVolume !== null && density !== null && basis !== "weight") {
-      weight = deliveredVolume * density;
-    }
-
     if (amountValue === null || !Number.isFinite(amountValue) || amountValue <= 0) {
       warnings.push({
         code: "material-missing-amount",
@@ -347,32 +339,7 @@
       });
     }
 
-    const volumeCapacity = positiveNumber(spec.volumeCapacity);
-    const weightCapacity = positiveNumber(spec.weightCapacity);
-    let mode;
-
-    if (basis === "weight") {
-      if (weightCapacity !== null) {
-        mode = deliveredVolume !== null && volumeCapacity !== null ? "both" : "weight";
-      } else if (deliveredVolume !== null && volumeCapacity !== null) {
-        mode = "volume";
-      } else {
-        mode = "weight";
-      }
-    } else if (deliveredVolume !== null && volumeCapacity !== null) {
-      mode = weight !== null && weightCapacity !== null ? "both" : "volume";
-    } else if (weight !== null && weightCapacity !== null) {
-      mode = "weight";
-    } else {
-      mode = "volume";
-    }
-
-    if (weight === null && weightCapacity !== null && basis !== "weight") {
-      warnings.push({
-        code: "material-weight-unknown",
-        message: "Weight is unknown because no material density was entered.",
-      });
-    }
+    const mode = basis === "weight" ? "weight" : "volume";
 
     const amount = basis === "weight" ? weight : deliveredVolume;
     const materialCost = amountValue !== null && priceValid && amount !== null
@@ -390,7 +357,7 @@
     if (amountValue !== null && amountValue > 0 && loads.exact <= 0) {
       warnings.push({
         code: "material-missing-truck-capacity",
-        message: "Add a truck capacity for the delivery amount, or enter a material density.",
+        message: "Add a truck capacity for the delivery amount.",
       });
     }
 
@@ -408,8 +375,8 @@
     } else if (deliveryMode === "custom") {
       const fee = Number(source.customFee);
       if (Number.isFinite(fee) && fee > 0) {
-        tripExact = fee;
-        tripRounded = fee;
+        tripExact = loads.exact * fee;
+        tripRounded = loads.rounded * fee;
       } else {
         warnings.push({
           code: "material-missing-custom-fee",
