@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="Project.md">Project notes</a> ·
-  <a href="mockups/quote-assistant-ui.html">UI mockup</a>
+  <a href="https://codeberg.org/DeSynkro/quote-assistant/src/branch/main/Project.md">Project notes</a> ·
+  <a href="https://codeberg.org/DeSynkro/quote-assistant/src/branch/main/mockups/quote-assistant-ui.html">UI mockup</a>
 </p>
 
 ---
