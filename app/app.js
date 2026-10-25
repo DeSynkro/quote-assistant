@@ -465,6 +465,7 @@
         </label>
       </div>
 
+      <div class="dimension-fields">
       <div class="fields" data-shape-fields="rectangle">
         <label class="field">
           <span>Width</span>
@@ -535,8 +536,9 @@
           </span>
         </label>
       </div>
+      </div>
 
-      <div class="fields one">
+      <div class="fields one swell-row">
         <label class="field">
           <span>Apply swell</span>
           <span class="check-row">
@@ -609,24 +611,7 @@
         </label>
       </div>
 
-      <div class="fields" data-delivery-settling-fields>
-        <label class="field" data-delivery-settling-percent-field>
-          <span>Settling allowance</span>
-          <span class="with-unit">
-            <input type="number" inputmode="decimal" step="any" data-delivery-field="settlingPercent" value="10">
-            <span class="unit">%</span>
-          </span>
-        </label>
-        <label class="field" data-delivery-add-settling-field>
-          <span>Apply to direct volume</span>
-          <span class="check-row">
-            <input type="checkbox" data-delivery-field="addSettling">
-            <span>Yes</span>
-          </span>
-        </label>
-      </div>
-
-      <div class="fields one">
+      <div class="fields price-settling-row">
         <label class="field">
           <span>Material price</span>
           <span class="with-unit">
@@ -634,6 +619,22 @@
             <span class="unit" data-role="price-unit">/ m³</span>
           </span>
         </label>
+        <div class="settling-field" data-delivery-settling-fields>
+          <label class="field" data-delivery-settling-percent-field>
+            <span>Settling allowance</span>
+            <span class="with-unit">
+              <input type="number" inputmode="decimal" step="any" data-delivery-field="settlingPercent" value="10">
+              <span class="unit">%</span>
+            </span>
+          </label>
+          <label class="field" data-delivery-add-settling-field>
+            <span>Apply to direct volume</span>
+            <span class="check-row">
+              <input type="checkbox" data-delivery-field="addSettling">
+              <span>Yes</span>
+            </span>
+          </label>
+        </div>
       </div>
 
       <div class="fields">

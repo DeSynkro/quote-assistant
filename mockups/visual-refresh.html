@@ -1,0 +1,1387 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quote Assistant - Visual Refresh Preview</title>
+<link rel="icon" type="image/png" sizes="128x128" href="../assets/favicon-128.png">
+<style>
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d0f13;
+    --bg-soft: #111419;
+    --grid: rgba(255, 255, 255, .018);
+    --surface: #171b21;
+    --surface-2: #1d2229;
+    --surface-3: #242a32;
+    --line: #2b323c;
+    --line-soft: #232932;
+    --text: #f4f6f8;
+    --muted: #99a2ad;
+    --faint: #737d89;
+    --accent: #ff5a00;
+    --accent-hover: #ff7426;
+    --accent-soft: rgba(255, 90, 0, .11);
+    --accent-line: rgba(255, 90, 0, .38);
+    --accent-contrast: #0d0f13;
+    --success: #63d99e;
+    --success-soft: rgba(99, 217, 158, .1);
+    --warn: #f2b84b;
+    --warn-soft: rgba(242, 184, 75, .1);
+    --danger: #ff8585;
+    --shadow: 0 18px 46px rgba(0, 0, 0, .3);
+    --shadow-soft: 0 7px 22px rgba(0, 0, 0, .14);
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f3f4f6;
+    --bg-soft: #eef0f3;
+    --grid: rgba(20, 24, 30, .035);
+    --surface: #ffffff;
+    --surface-2: #f8f9fa;
+    --surface-3: #eef1f4;
+    --line: #dce1e7;
+    --line-soft: #e8ebef;
+    --text: #171a1e;
+    --muted: #67717d;
+    --faint: #8b949e;
+    --accent: #d94d00;
+    --accent-hover: #b84000;
+    --accent-soft: rgba(217, 77, 0, .08);
+    --accent-line: rgba(217, 77, 0, .32);
+    --accent-contrast: #ffffff;
+    --success: #1b8058;
+    --success-soft: rgba(27, 128, 88, .09);
+    --warn: #946000;
+    --warn-soft: rgba(148, 96, 0, .08);
+    --danger: #b72e2e;
+    --shadow: 0 18px 44px rgba(20, 28, 38, .11);
+    --shadow-soft: 0 7px 20px rgba(20, 28, 38, .06);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  html {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(800px 430px at 12% -10%, var(--accent-soft), transparent 62%),
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+      linear-gradient(180deg, var(--bg-soft), var(--bg) 320px);
+    background-size: auto, 56px 56px, 56px 56px, auto;
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: background-color .2s ease, color .2s ease;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  .page {
+    width: min(1280px, 100%);
+    margin: 0 auto;
+    padding: 0 24px 68px;
+  }
+
+  .hazard-bar {
+    height: 6px;
+    background: repeating-linear-gradient(
+      135deg,
+      var(--accent) 0 11px,
+      #0c0e12 11px 22px
+    );
+  }
+
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 20px 0 18px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .brand-logo {
+    display: block;
+    width: 238px;
+    height: auto;
+    flex: 0 0 auto;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .3));
+  }
+
+  .brand-copy {
+    min-width: 0;
+  }
+
+  .eyebrow {
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+
+  .brand-sub {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .header-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+
+  .status-pill,
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 5px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .status-pill .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(99, 217, 158, .35);
+  }
+
+  .pill.accent {
+    color: var(--accent);
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+  }
+
+  .pill.warn {
+    color: var(--warn);
+    border-color: rgba(242, 184, 75, .32);
+    background: var(--warn-soft);
+  }
+
+  .theme-switch {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+  }
+
+  .theme-switch button {
+    min-height: 27px;
+    padding: 4px 10px;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .theme-switch button.active {
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  .btn {
+    min-height: 39px;
+    padding: 9px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 650;
+    white-space: nowrap;
+    transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+  }
+
+  .btn:hover {
+    border-color: var(--accent-line);
+    color: var(--accent);
+  }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  .btn.primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--accent-contrast);
+  }
+
+  .btn.small {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+  }
+
+  .btn.wide {
+    width: 100%;
+    min-height: 43px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .job-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 17px 20px;
+    border-left: 2px solid var(--accent);
+  }
+
+  .job-panel h1 {
+    margin: 4px 0 0;
+    font-size: clamp(21px, 2.1vw, 27px);
+    font-weight: 720;
+    letter-spacing: -.02em;
+  }
+
+  .job-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 9px;
+  }
+
+  .muted {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .job-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 370px;
+    gap: 20px;
+    align-items: start;
+    margin-top: 20px;
+  }
+
+  .main-column,
+  .sidebar {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 16px;
+  }
+
+  .card {
+    min-width: 0;
+    padding: 20px;
+    animation: rise .42s ease both;
+  }
+
+  .main-column .card:nth-child(2) {
+    animation-delay: .05s;
+  }
+
+  .main-column .card:nth-child(3) {
+    animation-delay: .1s;
+  }
+
+  .main-column .card:nth-child(4) {
+    animation-delay: .15s;
+  }
+
+  .sidebar > * {
+    animation: rise .42s ease both;
+    animation-delay: .12s;
+  }
+
+  .card-head,
+  .readout-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    margin: 3px 0 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+  }
+
+  .card-sub {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .field-grid.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .field {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .field > span:first-child {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .with-unit {
+    position: relative;
+    display: block;
+  }
+
+  .with-unit input {
+    padding-right: 47px;
+  }
+
+  .unit {
+    position: absolute;
+    top: 50%;
+    right: 11px;
+    transform: translateY(-50%);
+    color: var(--faint);
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-height: 41px;
+    padding: 9px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  }
+
+  input:focus,
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  select {
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position:
+      calc(100% - 16px) 18px,
+      calc(100% - 11px) 18px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 30px;
+  }
+
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .switch-copy {
+    display: grid;
+    gap: 2px;
+  }
+
+  .switch-copy strong {
+    font-size: 12.5px;
+    font-weight: 650;
+  }
+
+  .switch-copy span {
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex: 0 0 auto;
+  }
+
+  .switch input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .switch i {
+    position: absolute;
+    inset: 0;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+
+  .switch i::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform .15s ease, background-color .15s ease;
+  }
+
+  .switch input:checked + i {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  .switch input:checked + i::after {
+    transform: translateX(18px);
+    background: var(--accent);
+  }
+
+  .section-box {
+    margin-top: 13px;
+    padding: 15px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 13px;
+  }
+
+  .section-name {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .section-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 23px;
+    height: 23px;
+    flex: 0 0 auto;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 750;
+  }
+
+  .section-name strong {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .text-actions {
+    display: flex;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  .text-btn {
+    min-height: 27px;
+    padding: 4px 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+
+  .text-btn:hover {
+    border-color: var(--line);
+    color: var(--accent);
+  }
+
+  .calc-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 16px;
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .calc-strip strong {
+    color: var(--text);
+    font-weight: 650;
+  }
+
+  .calc-strip .accent {
+    color: var(--accent);
+  }
+
+  .add-row {
+    width: 100%;
+    min-height: 35px;
+    margin-top: 11px;
+    background: transparent;
+    border: 1px dashed var(--line);
+    border-radius: 7px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .add-row:hover {
+    border-color: var(--accent-line);
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .readout {
+    position: relative;
+    overflow: hidden;
+    padding: 20px 20px 18px;
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 1px var(--accent-soft), var(--shadow);
+  }
+
+  .readout::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(
+      135deg,
+      var(--accent) 0 9px,
+      #0c0e12 9px 18px
+    );
+    opacity: .9;
+  }
+
+  .readout-head {
+    padding-top: 2px;
+  }
+
+  .readout-head h2 {
+    font-size: 20px;
+  }
+
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--success);
+    font-size: 10px;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+
+  .live::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(99, 217, 158, .35);
+  }
+
+  .readout-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .readout-label {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .readout-label span:first-child {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .readout-label span:last-child {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .readout-value {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 680;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .readout-total {
+    margin: 13px 0 15px;
+    padding: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+  }
+
+  .total {
+    margin-top: 4px;
+    color: var(--accent);
+    font-size: 37px;
+    font-weight: 780;
+    letter-spacing: -.035em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.04;
+  }
+
+  .total-sub {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .price-options {
+    display: grid;
+    gap: 8px;
+    margin-top: 13px;
+    padding-top: 13px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .price-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .price-line select {
+    width: 120px;
+    min-height: 31px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .summary-box {
+    margin-top: 13px;
+    padding: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+
+  details {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .data-card {
+    padding: 17px;
+  }
+
+  .data-card h2 {
+    font-size: 15px;
+  }
+
+  .data-card .card-head {
+    margin-bottom: 9px;
+  }
+
+  .data-note {
+    margin: 0 0 11px;
+    color: var(--muted);
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+
+  .data-actions {
+    display: flex;
+    gap: 7px;
+  }
+
+  .preview-note {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--faint);
+    font-size: 10.5px;
+  }
+
+  .mobile-estimate {
+    display: none;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 1080px) {
+    .workspace {
+      grid-template-columns: minmax(0, 1fr) 340px;
+    }
+
+    .brand-logo {
+      width: 215px;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .page {
+      padding: 0 16px 92px;
+    }
+
+    .site-header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .header-tools {
+      justify-content: flex-start;
+      width: 100%;
+    }
+
+    .workspace {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: static;
+    }
+
+    .field-grid,
+    .field-grid.three {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mobile-estimate {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      background: var(--surface);
+      border: 1px solid var(--accent-line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      color: var(--text);
+      text-align: left;
+    }
+
+    .mobile-estimate-label {
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 650;
+    }
+
+    .mobile-estimate-trucks {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .mobile-estimate-price {
+      margin-left: auto;
+      color: var(--accent);
+      font-size: 18px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mobile-estimate-view {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .page {
+      padding: 0 12px 92px;
+    }
+
+    .brand {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 190px;
+    }
+
+    .job-panel {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .job-actions {
+      justify-content: flex-start;
+    }
+
+    .field-grid,
+    .field-grid.three {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .card {
+      padding: 16px;
+    }
+
+    .section-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .text-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    .total {
+      font-size: 33px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="hazard-bar"></div>
+
+<div class="page">
+  <header class="site-header">
+    <div class="brand">
+      <img class="brand-logo" src="../assets/newlogo-optimized.webp" alt="Quote Assistant">
+      <div class="brand-copy">
+        <div class="eyebrow">Field estimating system</div>
+        <div class="brand-sub">Offline estimating for earthmoving jobs</div>
+      </div>
+    </div>
+
+    <div class="header-tools">
+      <span class="status-pill"><span class="dot"></span>Local only</span>
+      <div class="theme-switch" role="group" aria-label="Preview theme">
+        <button type="button" data-theme-set="dark" class="active" aria-pressed="true">Dark</button>
+        <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="job-panel panel">
+    <div>
+      <div class="eyebrow">Job site</div>
+      <h1>Front yard trench and cut</h1>
+      <div class="job-meta">
+        <span class="pill warn">Unsaved changes</span>
+        <span class="muted">Draft saved locally</span>
+      </div>
+    </div>
+    <div class="job-actions">
+      <button class="btn small" type="button">New job</button>
+      <button class="btn small" type="button">Load</button>
+      <button class="btn small primary" type="button">Save job</button>
+    </div>
+  </section>
+
+  <div class="workspace">
+    <section class="main-column">
+      <article class="panel card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">Fleet</div>
+            <h2>Truck &amp; capacity</h2>
+            <p class="card-sub">Capacities and rates used across the job.</p>
+          </div>
+          <span class="pill">Preset: Tipper</span>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Volume capacity</span>
+            <span class="with-unit">
+              <input type="number" value="6.5" readonly>
+              <span class="unit">m³</span>
+            </span>
+          </label>
+          <label class="field">
+            <span>Weight capacity</span>
+            <span class="with-unit">
+              <input type="number" value="8" readonly>
+              <span class="unit">t</span>
+            </span>
+          </label>
+          <label class="field">
+            <span>Price per truck</span>
+            <span class="with-unit">
+              <input type="number" value="800" readonly>
+              <span class="unit">$</span>
+            </span>
+          </label>
+          <label class="field">
+            <span>Fuel consumption</span>
+            <span class="with-unit">
+              <input type="number" value="8.2" readonly>
+              <span class="unit">km/L</span>
+            </span>
+          </label>
+        </div>
+      </article>
+
+      <article class="panel card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">Excavation</div>
+            <h2>Removals</h2>
+            <p class="card-sub">Measure the material leaving site.</p>
+          </div>
+          <span class="pill">1 removal</span>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-copy">
+            <strong>Removing material?</strong>
+            <span>Adds removal sections and spoil trucks.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" checked aria-label="Removing material">
+            <i></i>
+          </label>
+        </div>
+
+        <div class="section-box">
+          <div class="section-head">
+            <div class="section-name">
+              <span class="section-index">01</span>
+              <strong>Front yard trench</strong>
+            </div>
+            <div class="text-actions">
+              <button class="text-btn" type="button">Duplicate</button>
+              <button class="text-btn" type="button">Remove</button>
+            </div>
+          </div>
+
+          <div class="field-grid three">
+            <label class="field">
+              <span>Width</span>
+              <span class="with-unit">
+                <input type="number" value="10" readonly>
+                <span class="unit">m</span>
+              </span>
+            </label>
+            <label class="field">
+              <span>Length</span>
+              <span class="with-unit">
+                <input type="number" value="3" readonly>
+                <span class="unit">m</span>
+              </span>
+            </label>
+            <label class="field">
+              <span>Depth / cut</span>
+              <span class="with-unit">
+                <input type="number" value="100" readonly>
+                <span class="unit">mm</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="calc-strip">
+            <span>Area <strong>30 m²</strong></span>
+            <span>Volume <strong>3 m³</strong></span>
+            <span class="accent">Swell 30% → 3.9 m³ loose</span>
+          </div>
+        </div>
+
+        <button class="add-row" type="button">+ Add removal</button>
+      </article>
+
+      <article class="panel card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">Delivery</div>
+            <h2>Materials in</h2>
+            <p class="card-sub">Bring material to the job site.</p>
+          </div>
+          <span class="pill">1 material</span>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-copy">
+            <strong>Bringing materials to site?</strong>
+            <span>Adds material cost and delivery trucks.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" checked aria-label="Bringing material to site">
+            <i></i>
+          </label>
+        </div>
+
+        <div class="section-box">
+          <div class="section-head">
+            <div class="section-name">
+              <span class="section-index">01</span>
+              <strong>Roadbase</strong>
+            </div>
+            <div class="text-actions">
+              <button class="text-btn" type="button">Duplicate</button>
+              <button class="text-btn" type="button">Remove</button>
+            </div>
+          </div>
+
+          <div class="field-grid three">
+            <label class="field">
+              <span>Amount</span>
+              <span class="with-unit">
+                <input type="number" value="8" readonly>
+                <span class="unit">t</span>
+              </span>
+            </label>
+            <label class="field">
+              <span>Material price</span>
+              <span class="with-unit">
+                <input type="number" value="118.75" readonly>
+                <span class="unit">/ t</span>
+              </span>
+            </label>
+            <label class="field">
+              <span>Delivery pricing</span>
+              <select>
+                <option>Included in price</option>
+                <option>Custom fee per truck</option>
+                <option>Use main truck rate</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="calc-strip">
+            <span>Delivery <strong>1 truck</strong></span>
+            <span>Material <strong>$950</strong></span>
+            <span>Delivery <strong>$0</strong></span>
+          </div>
+        </div>
+
+        <button class="add-row" type="button">+ Add material</button>
+      </article>
+
+      <article class="panel card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">Logistics</div>
+            <h2>Travel &amp; fuel</h2>
+            <p class="card-sub">Round trip, trips and fuel cost.</p>
+          </div>
+          <span class="pill accent">Enabled</span>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-copy">
+            <strong>Include travel and fuel?</strong>
+            <span>Adds the fuel cost for truck trips.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" checked aria-label="Include travel and fuel">
+            <i></i>
+          </label>
+        </div>
+
+        <div class="section-box">
+          <div class="field-grid">
+            <label class="field">
+              <span>Distance</span>
+              <span class="with-unit">
+                <input type="number" value="20" readonly>
+                <span class="unit">km</span>
+              </span>
+            </label>
+            <label class="field">
+              <span>Round trip</span>
+              <select>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Diesel price</span>
+              <span class="with-unit">
+                <input type="number" value="2.10" readonly>
+                <span class="unit">$ / L</span>
+              </span>
+            </label>
+            <label class="field">
+              <span>Fuel consumption</span>
+              <span class="with-unit">
+                <input type="number" value="8.2" readonly>
+                <span class="unit">km/L</span>
+              </span>
+            </label>
+          </div>
+          <div class="calc-strip">
+            <span>Total <strong>80 km</strong></span>
+            <span>Trips <strong>2</strong></span>
+            <span class="accent">Fuel <strong>$20.49</strong></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <aside class="sidebar">
+      <article class="panel readout">
+        <div class="readout-head">
+          <div>
+            <div class="eyebrow">Live estimate</div>
+            <h2>Job cost readout</h2>
+          </div>
+          <span class="live">Live</span>
+        </div>
+
+        <div class="readout-row">
+          <div class="readout-label">
+            <span>Spoil removal</span>
+            <span>3.9 m³ loose · 1 truck</span>
+          </div>
+          <span class="readout-value">$800</span>
+        </div>
+
+        <div class="readout-row">
+          <div class="readout-label">
+            <span>Materials in</span>
+            <span>8 t Roadbase · 1 truck</span>
+          </div>
+          <span class="readout-value">$950</span>
+        </div>
+
+        <div class="readout-row">
+          <div class="readout-label">
+            <span>Travel and fuel</span>
+            <span>80 km · 2 trips</span>
+          </div>
+          <span class="readout-value">$20.49</span>
+        </div>
+
+        <div class="readout-total">
+          <div class="eyebrow">Estimated charge</div>
+          <div class="total">$1,770.49</div>
+          <div class="total-sub">No GST · rounded up</div>
+        </div>
+
+        <button class="btn primary wide" type="button">Copy summary</button>
+
+        <div class="price-options">
+          <div class="price-line">
+            <span>Round up trucks and prices</span>
+            <label class="switch">
+              <input type="checkbox" checked aria-label="Round up trucks and prices">
+              <i></i>
+            </label>
+          </div>
+          <div class="price-line">
+            <span>GST</span>
+            <select>
+              <option>No GST</option>
+              <option>Add 10%</option>
+              <option>GST included</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          Spoil fits in 0.6 trucks, rounded up to 1. Bring in 8 t of Roadbase. Travel adds $20.49. About 1.6 trucks there and back, rounded up to 2. Estimated charge $1,770.49.
+        </div>
+
+        <details>
+          <summary>Show the maths</summary>
+        </details>
+      </article>
+
+      <article class="panel card data-card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">Backup</div>
+            <h2>Data</h2>
+          </div>
+        </div>
+        <p class="data-note">Back up saved jobs and truck presets, or move them to another device.</p>
+        <div class="data-actions">
+          <button class="btn small" type="button">Export</button>
+          <button class="btn small" type="button">Import</button>
+        </div>
+      </article>
+    </aside>
+  </div>
+
+  <div class="preview-note">Visual preview only. Controls are illustrative and not connected to the estimator.</div>
+</div>
+
+<button class="mobile-estimate" type="button">
+  <span class="mobile-estimate-label">Estimate</span>
+  <span class="mobile-estimate-trucks">2 trucks</span>
+  <span class="mobile-estimate-price">$1,770.49</span>
+  <span class="mobile-estimate-view">View</span>
+</button>
+
+<script>
+  (function () {
+    const root = document.documentElement;
+    const buttons = Array.from(document.querySelectorAll("[data-theme-set]"));
+
+    function setTheme(theme) {
+      root.dataset.theme = theme;
+      buttons.forEach((button) => {
+        const active = button.dataset.themeSet === theme;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+
+      try {
+        localStorage.setItem("quote-assistant.preview-theme", theme);
+      } catch (error) {
+        return;
+      }
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => setTheme(button.dataset.themeSet));
+    });
+
+    let initialTheme = "dark";
+    try {
+      initialTheme = localStorage.getItem("quote-assistant.preview-theme") || "dark";
+    } catch (error) {
+      initialTheme = "dark";
+    }
+    setTheme(initialTheme);
+  })();
+</script>
+</body>
+</html>
