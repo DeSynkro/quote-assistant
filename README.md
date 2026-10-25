@@ -89,8 +89,8 @@ The current APK is about 463 MB because it is a universal debug build. It contai
 ## Screenshots
 
 <p align="center">
-  <a href="assets/screenshots/overview.webp"><img src="assets/screenshots/overview.webp" alt="Quote Assistant job setup" width="49%"></a>
-  <a href="assets/screenshots/estimate.webp"><img src="assets/screenshots/estimate.webp" alt="Quote Assistant estimate" width="49%"></a>
+  <a href="https://codeberg.org/DeSynkro/quote-assistant/raw/branch/main/assets/screenshots/overview.webp"><img src="assets/screenshots/overview.webp" alt="Quote Assistant job setup" width="49%"></a>
+  <a href="https://codeberg.org/DeSynkro/quote-assistant/raw/branch/main/assets/screenshots/estimate.webp"><img src="assets/screenshots/estimate.webp" alt="Quote Assistant estimate" width="49%"></a>
 </p>
 
 ## Features
@@ -223,7 +223,7 @@ MIT. See [LICENSE](LICENSE).
 
 <p align="center">
   <a href="https://desynkro.com" target="_blank">
-    <img src="/assets/desynkro.png" width="240"
+    <img src="assets/desynkro.png" width="240"
          alt="DeSynkro"
          style="background:#0d1117;border-radius:8px;padding:8px 14px">
   </a>
