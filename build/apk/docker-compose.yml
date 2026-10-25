@@ -1,0 +1,23 @@
+name: quote-assistant-apk-build
+
+services:
+  apk:
+    build:
+      context: ../..
+      dockerfile: build/apk/Dockerfile
+    image: quote-assistant-apk-builder
+    user: "${PUID:-1000}:${PGID:-1000}"
+    working_dir: /work
+    environment:
+      ANDROID_HOME: /opt/android-sdk
+      ANDROID_SDK_ROOT: /opt/android-sdk
+      CARGO_HOME: /work/build/apk/cache/cargo
+      CARGO_TARGET_DIR: /work/build/apk/cache/target
+      CI: "true"
+      GRADLE_USER_HOME: /work/build/apk/cache/gradle
+      HOME: /tmp
+      JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+      NDK_HOME: /opt/android-sdk/ndk/28.2.13676358
+    volumes:
+      - ../..:/work
+      - ../../dist:/dist

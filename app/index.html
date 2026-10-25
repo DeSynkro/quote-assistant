@@ -5,31 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quote Assistant</title>
 <link rel="icon" type="image/png" sizes="128x128" href="favicon.png">
-<script>
-  (function () {
-    try {
-      const raw = localStorage.getItem("quote-assistant.preferences");
-      if (!raw) {
-        return;
-      }
-      const data = JSON.parse(raw);
-      if (!data || data.schemaVersion !== 1 || !data.preferences) {
-        return;
-      }
-      const theme = data.preferences.theme === "system"
-        ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
-        : data.preferences.theme;
-      if (theme === "light") {
-        document.documentElement.dataset.theme = "light";
-      }
-      if (data.preferences.reduceMotion === true) {
-        document.documentElement.dataset.reduceMotion = "true";
-      }
-    } catch (error) {
-      return;
-    }
-  })();
-</script>
+<script src="theme-init.js"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -395,6 +371,10 @@
       </div>
     </aside>
   </div>
+
+  <footer class="app-footer">
+    Built with <span class="heart">&hearts;</span> by <a href="https://desynkro.com" target="_blank" rel="noopener noreferrer">DeSynkro</a>
+  </footer>
 </main>
 
 <button class="mobile-estimate" id="mobile-estimate" type="button" aria-label="View full estimate">

@@ -108,7 +108,7 @@ button:focus-visible {
 .app {
   width: min(1280px, 100%);
   margin: 0 auto;
-  padding: 20px 24px 68px;
+  padding: 20px 24px 28px;
 }
 
 .top {
@@ -1266,6 +1266,57 @@ summary:hover {
   opacity: 0;
   transform: translateY(14px);
   pointer-events: none;
+}
+
+.app-footer {
+  margin-top: 24px;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--line-soft);
+  text-align: center;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.app-footer a {
+  color: var(--muted);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  color: var(--accent);
+}
+
+.heart {
+  display: inline-block;
+  color: #f85149;
+  transform-origin: center;
+  animation: heartbeat 1.2s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  14% {
+    transform: scale(1.25);
+  }
+
+  28% {
+    transform: scale(1);
+  }
+
+  42% {
+    transform: scale(1.2);
+  }
+
+  56% {
+    transform: scale(1);
+  }
 }
 
 @keyframes rise {

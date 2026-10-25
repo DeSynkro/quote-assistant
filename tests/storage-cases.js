@@ -57,6 +57,17 @@ function sampleSharedJob(id, name) {
   };
 }
 
+function fakeInvoke(handler) {
+  const calls = [];
+
+  async function invoke(command, args) {
+    calls.push({ command, args });
+    return handler(command, args, calls.length);
+  }
+
+  return { invoke, calls };
+}
+
 function createCases(QuoteStorage) {
   return [
     {
@@ -533,6 +544,103 @@ function createCases(QuoteStorage) {
         const store = QuoteStorage.createPreferenceStore(null);
         assert.deepEqual(store.load(), QuoteStorage.PREFERENCE_DEFAULTS);
         assert.equal(store.save({ theme: "light" }), false);
+      },
+    },
+
+    {
+      name: "loads native truck presets",
+      async run() {
+        const presets = [
+          {
+            id: "truck-1",
+            name: "Tipper",
+            volumeCapacity: "6.5",
+            weightCapacity: "8",
+            fuelConsumption: "8.2",
+            pricePerTruck: "800",
+          },
+        ];
+        const { invoke, calls } = fakeInvoke(() => ({
+          schemaVersion: 1,
+          presets,
+          selectedId: "truck-1",
+        }));
+        const store = QuoteStorage.createNativeStore(invoke);
+        assert.deepEqual(await store.load(), { presets, selectedId: "truck-1" });
+        assert.equal(calls[0].command, "load_presets");
+      },
+    },
+    {
+      name: "saves native truck presets",
+      async run() {
+        const presets = [
+          {
+            id: "truck-1",
+            name: "Tipper",
+            volumeCapacity: "6.5",
+            weightCapacity: "8",
+            fuelConsumption: "8.2",
+            pricePerTruck: "800",
+          },
+        ];
+        const { invoke, calls } = fakeInvoke(() => null);
+        const store = QuoteStorage.createNativeStore(invoke);
+        assert.equal(await store.save({ presets, selectedId: "truck-1" }), true);
+        assert.equal(calls[0].command, "save_presets");
+        assert.deepEqual(calls[0].args.state, {
+          schemaVersion: 1,
+          presets,
+          selectedId: "truck-1",
+        });
+      },
+    },
+    {
+      name: "loads native jobs",
+      async run() {
+        const job = sampleSharedJob("job-1", "Front yard");
+        const { invoke, calls } = fakeInvoke(() => [job]);
+        const store = QuoteStorage.createNativeJobStore(invoke);
+        assert.deepEqual(await store.load(), { jobs: [job] });
+        assert.equal(calls[0].command, "load_jobs");
+      },
+    },
+    {
+      name: "saves changed native jobs and deletes removed jobs",
+      async run() {
+        const first = sampleSharedJob("job-1", "Front yard");
+        const second = sampleSharedJob("job-2", "Back yard");
+        const third = sampleSharedJob("job-3", "Driveway");
+        const { invoke, calls } = fakeInvoke((command) => (
+          command === "load_jobs" ? [first, second] : null
+        ));
+        const store = QuoteStorage.createNativeJobStore(invoke);
+        await store.load();
+        calls.length = 0;
+
+        const updated = { ...first, name: "Front yard updated" };
+        assert.equal(await store.save({ jobs: [updated, third] }), true);
+        assert.deepEqual(
+          calls.map((call) => call.command),
+          ["save_job", "save_job", "delete_job"]
+        );
+        assert.equal(calls[0].args.job.id, "job-1");
+        assert.equal(calls[1].args.job.id, "job-3");
+        assert.equal(calls[2].args.id, "job-2");
+      },
+    },
+    {
+      name: "reports a failed native job save",
+      async run() {
+        const job = sampleSharedJob("job-1", "Front yard");
+        const { invoke } = fakeInvoke((command) => {
+          if (command === "save_job") {
+            throw new Error("disk full");
+          }
+          return [];
+        });
+        const store = QuoteStorage.createNativeJobStore(invoke);
+        await store.load();
+        assert.equal(await store.save({ jobs: [job] }), false);
       },
     },
   ];

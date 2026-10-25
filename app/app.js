@@ -215,6 +215,7 @@
   let draftTimer = null;
   let draftPending = false;
   let storageIsShared = false;
+  let storageIsNative = false;
   let refreshingShared = false;
   let jobSearchQuery = "";
   let jobDirty = false;
@@ -268,6 +269,26 @@
           save: () => false,
         },
     };
+  }
+
+  function usesAsyncStorage() {
+    return storageIsShared || storageIsNative;
+  }
+
+  function getTauriInvoke() {
+    if (typeof window === "undefined" || !window.__TAURI__) {
+      return null;
+    }
+
+    if (window.__TAURI__.core && typeof window.__TAURI__.core.invoke === "function") {
+      return window.__TAURI__.core.invoke.bind(window.__TAURI__.core);
+    }
+
+    if (typeof window.__TAURI__.invoke === "function") {
+      return window.__TAURI__.invoke.bind(window.__TAURI__);
+    }
+
+    return null;
   }
 
   function updateStorageLabels() {
@@ -348,6 +369,15 @@
   }
 
   async function detectStores() {
+    const invoke = getTauriInvoke();
+    if (invoke && storageApi && typeof storageApi.createNativeStore === "function") {
+      storageIsNative = true;
+      return {
+        truckStore: storageApi.createNativeStore(invoke),
+        jobStore: storageApi.createNativeJobStore(invoke),
+      };
+    }
+
     const apiBase = getApiBase();
     if (!apiBase) {
       return createLocalStores();
@@ -1587,7 +1617,7 @@
 
     selectedTruckPresetId = preset.id;
     truckDirty = false;
-    const saved = storageIsShared
+    const saved = usesAsyncStorage()
       ? await truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId })
       : truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId });
     closePresetSaveForm();
@@ -1613,7 +1643,7 @@
     truckPresets = truckPresets.filter((item) => item.id !== preset.id);
     selectedTruckPresetId = null;
     truckDirty = false;
-    const saved = storageIsShared
+    const saved = usesAsyncStorage()
       ? await truckStore.save({ presets: truckPresets, selectedId: null })
       : truckStore.save({ presets: truckPresets, selectedId: null });
     renderTruckPresetOptions();
@@ -1632,7 +1662,7 @@
       selectedTruckPresetId = null;
       truckDirty = false;
       deleteTruckPresetButton.disabled = true;
-      const saved = storageIsShared
+      const saved = usesAsyncStorage()
         ? await truckStore.save({ presets: truckPresets, selectedId: null })
         : truckStore.save({ presets: truckPresets, selectedId: null });
       setPresetWarning(saved ? "" : "Presets could not be saved.");
@@ -1648,7 +1678,7 @@
     selectedTruckPresetId = preset.id;
     truckDirty = false;
     applyPresetToState(preset);
-    const saved = storageIsShared
+    const saved = usesAsyncStorage()
       ? await truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId })
       : truckStore.save({ presets: truckPresets, selectedId: selectedTruckPresetId });
     setPresetWarning(saved ? "" : "Presets could not be saved.");
@@ -1659,7 +1689,7 @@
   }
 
   async function initTruckPresets() {
-    const stored = storageIsShared ? await truckStore.load() : truckStore.load();
+    const stored = usesAsyncStorage() ? await truckStore.load() : truckStore.load();
     truckPresets = stored.presets;
     selectedTruckPresetId = stored.selectedId;
     const preset = getSelectedTruckPreset();
@@ -1910,7 +1940,7 @@
     };
 
     savedJobs = [job, ...savedJobs.filter((item) => item.id !== job.id)];
-    const saved = storageIsShared
+    const saved = usesAsyncStorage()
       ? await jobStore.save({ jobs: savedJobs })
       : jobStore.save({ jobs: savedJobs });
     const savedLabel = storageIsShared ? "Saved to shared storage" : "Saved locally";
@@ -2181,7 +2211,7 @@
       ...savedJobs.slice(index),
     ];
     renderSavedJobs();
-    const saved = storageIsShared
+    const saved = usesAsyncStorage()
       ? await jobStore.save({ jobs: savedJobs })
       : jobStore.save({ jobs: savedJobs });
 
@@ -2199,7 +2229,7 @@
     }
 
     savedJobs = savedJobs.filter((item) => item.id !== job.id);
-    const saved = storageIsShared
+    const saved = usesAsyncStorage()
       ? await jobStore.save({ jobs: savedJobs })
       : jobStore.save({ jobs: savedJobs });
 
@@ -2228,7 +2258,7 @@
   }
 
   async function initJobs() {
-    const stored = storageIsShared ? await jobStore.load() : jobStore.load();
+    const stored = usesAsyncStorage() ? await jobStore.load() : jobStore.load();
     savedJobs = stored.jobs;
     setJobStatus("Unsaved job");
   }
@@ -2242,7 +2272,7 @@
     return `${count} ${count === 1 ? singular : plural}`;
   }
 
-  function exportData() {
+  async function exportData() {
     if (typeof Backup === "undefined") {
       setDataStatus("Backup support is unavailable.", true);
       return;
@@ -2252,16 +2282,46 @@
       presets: truckPresets,
       jobs: savedJobs,
     });
-    const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    const contents = JSON.stringify(backup, null, 2);
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const filename = `quote-assistant-backup-${stamp}.json`;
+    const invoke = storageIsNative ? getTauriInvoke() : null;
+
+    if (invoke) {
+      try {
+        const savedPath = await invoke("export_data", {
+          request: {
+            contents,
+            defaultName: filename,
+          },
+        });
+
+        if (!savedPath) {
+          setDataStatus("Export cancelled.");
+          showToast("Export cancelled.");
+          return;
+        }
+
+        setDataStatus(`Exported ${countLabel(savedJobs.length, "job", "jobs")} and ${countLabel(truckPresets.length, "preset", "presets")}.`);
+        showToast("Backup saved.");
+        return;
+      } catch (error) {
+        const message = error && error.message ? error.message : "Could not save the backup.";
+        setDataStatus(message, true);
+        showToast(message, { tone: "error" });
+        return;
+      }
+    }
+
+    const blob = new Blob([contents], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const now = new Date();
-    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     link.href = url;
-    link.download = `quote-assistant-backup-${stamp}.json`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2282,10 +2342,10 @@
       const parsed = Backup.parseBackup(text);
       const mergedPresets = Backup.mergePresets(truckPresets, parsed.presets);
       const mergedJobs = Backup.mergeJobs(savedJobs, parsed.jobs);
-      const presetsSaved = storageIsShared
+      const presetsSaved = usesAsyncStorage()
         ? await truckStore.save({ presets: mergedPresets, selectedId: selectedTruckPresetId })
         : truckStore.save({ presets: mergedPresets, selectedId: selectedTruckPresetId });
-      const jobsSaved = storageIsShared
+      const jobsSaved = usesAsyncStorage()
         ? await jobStore.save({ jobs: mergedJobs })
         : jobStore.save({ jobs: mergedJobs });
 

@@ -1,0 +1,19 @@
+name: quote-assistant-appimage-build
+
+services:
+  appimage:
+    build:
+      context: ../..
+      dockerfile: build/appimage/Dockerfile
+    image: quote-assistant-appimage-builder
+    user: "${PUID:-1000}:${PGID:-1000}"
+    working_dir: /work
+    environment:
+      APPIMAGE_EXTRACT_AND_RUN: "1"
+      CARGO_HOME: /work/build/appimage/cache/cargo
+      CARGO_TARGET_DIR: /work/build/appimage/cache/target
+      HOME: /tmp
+      NO_STRIP: "true"
+    volumes:
+      - ../..:/work
+      - ../../dist:/dist

@@ -1,23 +1,42 @@
-# Temporary design files
-assets/logo-temp.png
-assets/icon-temp.png
-assets/basic-idea.jpg
-
 # Build output
-dist/
+dist/*
+!dist/.gitkeep
 src-tauri/target/
+src-tauri/gen/schemas/
+build/appimage/cache/*
+!build/appimage/cache/.gitkeep
+build/exe/cache/*
+!build/exe/cache/.gitkeep
+build/apk/cache/*
+!build/apk/cache/.gitkeep
+src-tauri/gen/android/
 
-# Local planning notes
-docs/planning/
-
-# Local configuration and runtime data
+# Runtime data
 .env
 docker/data/jobs/*.json
 docker/data/trash/
 docker/data/presets.json
 docker/data/**/*.tmp
 
+# Local source assets
+assets/newlogo.png
+assets/favicon.png
+
 # OS and editor files
 .DS_Store
 Thumbs.db
 *.swp
+.directory
+
+# Defensive ignore rules
+.env.*
+!**/.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+local.properties
+*.apk
+*.aab

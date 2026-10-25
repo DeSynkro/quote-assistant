@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Default desktop capability for Quote Assistant",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

@@ -336,6 +336,116 @@
     return { load, save, refresh };
   }
 
+  function createNativeStore(invokeImpl) {
+    const invoke = typeof invokeImpl === "function" ? invokeImpl : null;
+
+    async function load() {
+      if (!invoke) {
+        return { presets: [], selectedId: null };
+      }
+
+      try {
+        const data = await invoke("load_presets");
+        if (!data || data.schemaVersion !== SCHEMA_VERSION || !Array.isArray(data.presets)) {
+          return { presets: [], selectedId: null };
+        }
+
+        const presets = data.presets.map(normalizePreset).filter(Boolean);
+        const selectedId = typeof data.selectedId === "string"
+          && presets.some((preset) => preset.id === data.selectedId)
+          ? data.selectedId
+          : null;
+
+        return { presets, selectedId };
+      } catch (error) {
+        return { presets: [], selectedId: null };
+      }
+    }
+
+    async function save(state) {
+      if (!invoke) {
+        return false;
+      }
+
+      try {
+        const source = state || {};
+        const presets = Array.isArray(source.presets)
+          ? source.presets.map(normalizePreset).filter(Boolean)
+          : [];
+        const selectedId = typeof source.selectedId === "string"
+          && presets.some((preset) => preset.id === source.selectedId)
+          ? source.selectedId
+          : null;
+
+        await invoke("save_presets", {
+          state: {
+            schemaVersion: SCHEMA_VERSION,
+            presets,
+            selectedId,
+          },
+        });
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    return { load, save };
+  }
+
+  function createNativeJobStore(invokeImpl) {
+    const invoke = typeof invokeImpl === "function" ? invokeImpl : null;
+    let cached = new Map();
+
+    async function load() {
+      if (!invoke) {
+        return { jobs: [] };
+      }
+
+      try {
+        const data = await invoke("load_jobs");
+        const jobs = Array.isArray(data)
+          ? data.map(normalizeJob).filter(Boolean)
+          : [];
+        cached = new Map(jobs.map((job) => [job.id, JSON.stringify(job)]));
+        return { jobs };
+      } catch (error) {
+        cached = new Map();
+        return { jobs: [] };
+      }
+    }
+
+    async function save(state) {
+      if (!invoke) {
+        return false;
+      }
+
+      const source = state || {};
+      const jobs = Array.isArray(source.jobs)
+        ? source.jobs.map(normalizeJob).filter(Boolean)
+        : [];
+      const next = new Map(jobs.map((job) => [job.id, JSON.stringify(job)]));
+      const changed = jobs.filter((job) => cached.get(job.id) !== next.get(job.id));
+      const removed = [...cached.keys()].filter((id) => !next.has(id));
+
+      try {
+        for (const job of changed) {
+          await invoke("save_job", { job });
+        }
+
+        for (const id of removed) {
+          await invoke("delete_job", { id });
+        }
+
+        cached = next;
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    return { load, save };
+  }
 
   function normalizePreferences(value) {
     const source = value && typeof value === "object" ? value : {};
@@ -493,5 +603,7 @@
     createPreferenceStore,
     createRemoteStore,
     createRemoteJobStore,
+    createNativeStore,
+    createNativeJobStore,
   };
 });
