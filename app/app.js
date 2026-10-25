@@ -728,6 +728,8 @@
         element.checked = section.shape !== "rectangle";
       } else if (field === "shape") {
         element.value = section.shape === "rectangle" ? "unevenEnds" : section.shape;
+      } else if (element.type === "checkbox") {
+        element.checked = Boolean(section[field]);
       } else {
         element.value = section[field] ?? "";
       }
@@ -2528,7 +2530,9 @@
     } else if (field === "shape") {
       section.shape = event.target.value;
     } else {
-      section[field] = event.target.value;
+      section[field] = event.target.type === "checkbox"
+        ? event.target.checked
+        : event.target.value;
     }
 
     if (field === "uneven" || field === "shape") {
@@ -2541,6 +2545,8 @@
       if (select) {
         select.value = section.shape === "rectangle" ? "unevenEnds" : section.shape;
       }
+      applyShapeVisibility(card, section);
+    } else if (field === "swellEnabled") {
       applyShapeVisibility(card, section);
     }
 
