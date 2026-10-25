@@ -779,6 +779,33 @@ select:focus {
   font-size: 13px;
 }
 
+.summary-actions {
+  margin-top: 10px;
+}
+
+#copy-summary.warn {
+  color: var(--warn);
+  border-color: rgba(242, 184, 75, .35);
+}
+
+.clipboard-fallback {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  opacity: 0;
+}
+
+.mobile-estimate {
+  display: none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+.mobile-estimate.is-hidden {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+
 .summary strong {
   color: var(--text);
 }
@@ -865,11 +892,78 @@ summary:hover {
   .header-actions {
     justify-content: flex-start;
   }
+
+  .app {
+    padding-bottom: 96px;
+  }
+
+  .mobile-estimate {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: linear-gradient(180deg, #24312a, #1d2024);
+    border: 1px solid rgba(110, 231, 168, .35);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mobile-estimate-label {
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+  }
+
+  .mobile-estimate-trucks {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .mobile-estimate-price {
+    margin-left: auto;
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 650;
+  }
+
+  .mobile-estimate-view {
+    color: var(--muted);
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-estimate {
+    transition: none;
+  }
 }
 
 @media (max-width: 620px) {
   .app {
-    padding: 18px 12px 48px;
+    padding: 18px 12px 96px;
+  }
+
+  .job-item {
+    flex-wrap: wrap;
+  }
+
+  .job-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 
   h1 {

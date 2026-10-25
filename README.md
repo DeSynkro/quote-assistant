@@ -47,6 +47,9 @@ The calculation engine, estimator UI and Docker Compose LAN version are working.
 - Autosave the current job as a local draft and restore it after a reload
 - Search saved jobs by name, summary or date
 - Refresh shared jobs and presets from the Load panel
+- Duplicate a saved job into a new unsaved copy
+- Copy the current estimate summary to the clipboard
+- Mobile sticky estimate bar for quick price and truck access, hidden once the estimate is in view
 - Automatic timestamp names when a job is unnamed
 - Export and import jobs and truck presets as JSON
 - Docker Compose LAN app with shared jobs and truck presets

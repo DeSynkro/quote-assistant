@@ -47,6 +47,11 @@
   const priceOutput = document.getElementById("result-price");
   const priceSubOutput = document.getElementById("result-price-sub");
   const summaryOutput = document.getElementById("summary");
+  const copySummaryButton = document.getElementById("copy-summary");
+  const mobileEstimateButton = document.getElementById("mobile-estimate");
+  const mobileEstimateTrucksOutput = document.getElementById("mobile-estimate-trucks");
+  const mobileEstimatePriceOutput = document.getElementById("mobile-estimate-price");
+  const resultsEl = document.querySelector(".results");
   const warningsOutput = document.getElementById("warnings");
   const mathsOutput = document.getElementById("maths");
   const deliveryEnabledInput = document.getElementById("delivery-enabled");
@@ -197,6 +202,7 @@
   let storageIsShared = false;
   let refreshingShared = false;
   let jobSearchQuery = "";
+  let copySummaryTimer = null;
 
   function getStorageBackend() {
     try {
@@ -1190,6 +1196,8 @@
       ? `Exact ${money(finalGst.exact.total)} · `
       : "";
     priceSubOutput.textContent = `${exactCharge}${gstText}`;
+    mobileEstimateTrucksOutput.textContent = truckValueText(finalTrucks, showRounded);
+    mobileEstimatePriceOutput.textContent = priceOutput.textContent;
 
     if (delivery) {
       if (!materialHasAmount(delivery)) {
@@ -1475,6 +1483,58 @@
     jobStatusOutput.classList.toggle("warn", Boolean(warn));
   }
 
+  async function copyText(text) {
+    let copied = false;
+
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        copied = false;
+      }
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "clipboard-fallback";
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    try {
+      copied = document.execCommand("copy");
+    } catch (error) {
+      copied = false;
+    }
+
+    textarea.remove();
+    return copied;
+  }
+
+  async function copySummary() {
+    const name = jobNameInput.value.trim() || "Untitled job";
+    const text = [
+      name,
+      `${mobileEstimateTrucksOutput.textContent} · ${priceOutput.textContent}`,
+      summaryOutput.textContent.trim(),
+    ].join("\n");
+    const copied = await copyText(text);
+    copySummaryButton.textContent = copied ? "Copied" : "Could not copy";
+    copySummaryButton.classList.toggle("warn", !copied);
+
+    if (copySummaryTimer) {
+      clearTimeout(copySummaryTimer);
+    }
+
+    copySummaryTimer = setTimeout(() => {
+      copySummaryButton.textContent = "Copy summary";
+      copySummaryButton.classList.remove("warn");
+      copySummaryTimer = null;
+    }, 1800);
+  }
+
   function formatDateTime(date) {
     return new Intl.DateTimeFormat(undefined, {
       day: "2-digit",
@@ -1674,6 +1734,12 @@
       const actions = document.createElement("div");
       actions.className = "job-item-actions";
 
+      const duplicateButton = document.createElement("button");
+      duplicateButton.type = "button";
+      duplicateButton.className = "btn small";
+      duplicateButton.textContent = "Duplicate";
+      duplicateButton.dataset.duplicateJob = job.id;
+
       const loadButton = document.createElement("button");
       loadButton.type = "button";
       loadButton.className = "btn small";
@@ -1686,6 +1752,7 @@
       deleteButton.textContent = "Delete";
       deleteButton.dataset.deleteJob = job.id;
 
+      actions.appendChild(duplicateButton);
       actions.appendChild(loadButton);
       actions.appendChild(deleteButton);
       item.appendChild(info);
@@ -1765,6 +1832,19 @@
     renderSections();
     markDraftChanged();
     setJobStatus(`Loaded · ${job.name}`);
+    closeLoadJobs();
+  }
+
+  function duplicateJob(job) {
+    hydrateJobState(job.data);
+    jobNameInput.value = `${job.name} copy`;
+    currentJobId = null;
+    renderTruckPresetOptions();
+    updateTruckPresetStatus();
+    syncStaticControls();
+    renderSections();
+    markDraftChanged();
+    setJobStatus(`Unsaved copy · ${job.name}`);
     closeLoadJobs();
   }
 
@@ -2291,6 +2371,10 @@
   });
 
   saveJobButton.addEventListener("click", saveJob);
+  copySummaryButton.addEventListener("click", copySummary);
+  mobileEstimateButton.addEventListener("click", () => {
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   loadJobsButton.addEventListener("click", openLoadJobs);
   closeLoadJobsButton.addEventListener("click", closeLoadJobs);
   refreshSharedButton.addEventListener("click", refreshSharedData);
@@ -2326,6 +2410,15 @@
   });
 
   savedJobsList.addEventListener("click", (event) => {
+    const duplicateButton = event.target.closest("[data-duplicate-job]");
+    if (duplicateButton) {
+      const job = savedJobs.find((item) => item.id === duplicateButton.dataset.duplicateJob);
+      if (job) {
+        duplicateJob(job);
+      }
+      return;
+    }
+
     const loadButton = event.target.closest("[data-load-job]");
     if (loadButton) {
       const job = savedJobs.find((item) => item.id === loadButton.dataset.loadJob);
@@ -2377,6 +2470,24 @@
     setJobStatus("Unsaved job");
   });
 
+  function setupMobileEstimateObserver() {
+    if (!("IntersectionObserver" in window)) {
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const visible = Boolean(entries[0] && entries[0].isIntersecting);
+      mobileEstimateButton.classList.toggle("is-hidden", visible);
+      mobileEstimateButton.tabIndex = visible ? -1 : 0;
+      mobileEstimateButton.setAttribute("aria-hidden", String(visible));
+    }, {
+      threshold: 0.08,
+      rootMargin: "0px 0px -72px 0px",
+    });
+
+    observer.observe(resultsEl);
+  }
+
   async function init() {
     const stores = await detectStores();
     truckStore = stores.truckStore;
@@ -2393,6 +2504,8 @@
       updateTruckPresetStatus();
       setJobStatus("Draft restored");
     }
+
+    setupMobileEstimateObserver();
   }
 
   init();

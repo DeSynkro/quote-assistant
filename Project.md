@@ -216,8 +216,14 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   never written to the shared Docker store. A draft clears on Save or New and is
   restored after an accidental reload.
 - The Load panel searches saved jobs by name, summary or saved date.
+- Saved jobs can be duplicated into a new unsaved copy.
 - In Docker shared mode, opening Load refreshes shared jobs and truck presets.
   A Refresh button repeats the refresh.
+- The estimate panel has a Copy summary button. The text includes the job name,
+  truck count, charge and the plain-language summary.
+- On narrow screens a fixed estimate bar shows the price and truck count. Tapping
+  it scrolls to the full estimate. The bar fades out while the estimate section
+  is visible.
 - Storage is versioned.
 - The browser build uses `localStorage` when no Docker API is available.
 - The Docker Compose build uses the shared server API and stores one job per JSON file.
@@ -330,7 +336,6 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   the app leans toward an extra truck rather than an overloaded one.
 - **Material preset table**: topsoil, sand, gravel, crushed rock, clay, concrete
   rubble - each with a default price, swell and settling values, all editable.
-- **Copy summary** to clipboard (text only) for pasting into a note or message.
 - **Price rounding display** option: nearest $1 / $5 / $10.
 - **Validation and warnings**: zero/negative dimensions, weight over capacity,
   missing truck size and missing depth warnings.

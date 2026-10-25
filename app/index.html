@@ -316,6 +316,9 @@
       </div>
 
       <div class="summary" id="summary">Add job dimensions to see an estimate.</div>
+      <div class="summary-actions">
+        <button class="btn small" id="copy-summary" type="button">Copy summary</button>
+      </div>
       <div class="warnings" id="warnings" hidden></div>
 
       <details>
@@ -330,6 +333,13 @@
     </aside>
   </div>
 </main>
+
+<button class="mobile-estimate" id="mobile-estimate" type="button" aria-label="View full estimate">
+  <span class="mobile-estimate-label">Estimate</span>
+  <span class="mobile-estimate-trucks" id="mobile-estimate-trucks">0 trucks</span>
+  <span class="mobile-estimate-price" id="mobile-estimate-price">$0</span>
+  <span class="mobile-estimate-view">View</span>
+</button>
 
 <div class="overlay" id="load-jobs-panel" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-label="Load job">
