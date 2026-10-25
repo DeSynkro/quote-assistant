@@ -44,6 +44,9 @@ The calculation engine, estimator UI and Docker Compose LAN version are working.
 - Swell, price rounding and GST
 - Travel and fuel with round trips, truck fuel consumption, price per km and diesel price
 - Save, load and delete jobs in the browser or shared Docker store
+- Autosave the current job as a local draft and restore it after a reload
+- Search saved jobs by name, summary or date
+- Refresh shared jobs and presets from the Load panel
 - Automatic timestamp names when a job is unnamed
 - Export and import jobs and truck presets as JSON
 - Docker Compose LAN app with shared jobs and truck presets

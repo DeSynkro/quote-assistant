@@ -194,6 +194,29 @@ h1 {
   letter-spacing: .2px;
 }
 
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.job-search {
+  display: block;
+  margin: 14px 0 2px;
+}
+
+.job-search span {
+  display: block;
+  margin-bottom: 5px;
+}
+
+#job-list-status {
+  min-height: 16px;
+  margin: 6px 0 2px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
 .job-item {
   display: flex;
   align-items: center;

@@ -283,6 +283,52 @@ function createCases(QuoteStorage) {
         assert.equal(await store.save({ jobs: [first, second] }), false);
       },
     },
+
+    {
+      name: "refreshes shared truck presets from the API",
+      async run() {
+        const presets = [
+          {
+            id: "truck-1",
+            name: "Tipper",
+            volumeCapacity: "6.5",
+            weightCapacity: "8",
+            fuelConsumption: "8.2",
+            pricePerTruck: "800",
+          },
+        ];
+        const { fetchImpl } = fakeJsonFetch(() => ({
+          body: { schemaVersion: 1, presets, selectedId: "truck-1" },
+        }));
+        const store = QuoteStorage.createRemoteStore("/api", fetchImpl);
+        assert.deepEqual(await store.refresh(), { presets, selectedId: "truck-1" });
+      },
+    },
+    {
+      name: "reports a failed shared preset refresh",
+      async run() {
+        const { fetchImpl } = fakeJsonFetch(() => ({ status: 500, body: {} }));
+        const store = QuoteStorage.createRemoteStore("/api", fetchImpl);
+        await assert.rejects(store.refresh());
+      },
+    },
+    {
+      name: "refreshes shared jobs from the API",
+      async run() {
+        const job = sampleSharedJob("job-1", "Front yard");
+        const { fetchImpl } = fakeJsonFetch(() => ({ body: { jobs: [job] } }));
+        const store = QuoteStorage.createRemoteJobStore("/api", fetchImpl);
+        assert.deepEqual(await store.refresh(), { jobs: [job] });
+      },
+    },
+    {
+      name: "reports a failed shared job refresh",
+      async run() {
+        const { fetchImpl } = fakeJsonFetch(() => ({ status: 500, body: {} }));
+        const store = QuoteStorage.createRemoteJobStore("/api", fetchImpl);
+        await assert.rejects(store.refresh());
+      },
+    },
     {
       name: "loads empty job storage",
       run() {
@@ -358,6 +404,68 @@ function createCases(QuoteStorage) {
         const store = QuoteStorage.createJobStore(null);
         assert.deepEqual(store.load(), { jobs: [] });
         assert.equal(store.save({ jobs: [] }), false);
+      },
+    },
+
+    {
+      name: "loads no draft when storage is empty",
+      run() {
+        const store = QuoteStorage.createDraftStore(memoryBackend());
+        assert.equal(store.load(), null);
+      },
+    },
+    {
+      name: "saves and loads a draft",
+      run() {
+        const store = QuoteStorage.createDraftStore(memoryBackend());
+        const draft = {
+          name: "Front yard",
+          currentJobId: "job-1",
+          data: { sections: [], truck: { volumeCapacity: "6.5" } },
+          updatedAt: "2026-10-25T10:00:00.000Z",
+        };
+        assert.equal(store.save(draft), true);
+        assert.deepEqual(store.load(), draft);
+      },
+    },
+    {
+      name: "ignores an invalid draft",
+      run() {
+        const backend = memoryBackend();
+        backend.setItem(QuoteStorage.DRAFT_KEY, "{not json");
+        const store = QuoteStorage.createDraftStore(backend);
+        assert.equal(store.load(), null);
+      },
+    },
+    {
+      name: "ignores an unknown draft schema version",
+      run() {
+        const backend = memoryBackend();
+        backend.setItem(QuoteStorage.DRAFT_KEY, JSON.stringify({
+          schemaVersion: 99,
+          data: {},
+        }));
+        const store = QuoteStorage.createDraftStore(backend);
+        assert.equal(store.load(), null);
+      },
+    },
+    {
+      name: "clears a draft",
+      run() {
+        const backend = memoryBackend();
+        const store = QuoteStorage.createDraftStore(backend);
+        store.save({ name: "", currentJobId: null, data: {}, updatedAt: "" });
+        assert.equal(store.clear(), true);
+        assert.equal(store.load(), null);
+      },
+    },
+    {
+      name: "handles unavailable draft storage",
+      run() {
+        const store = QuoteStorage.createDraftStore(null);
+        assert.equal(store.load(), null);
+        assert.equal(store.save({ data: {} }), false);
+        assert.equal(store.clear(), false);
       },
     },
   ];

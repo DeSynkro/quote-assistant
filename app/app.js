@@ -14,6 +14,9 @@
   const loadJobsPanel = document.getElementById("load-jobs-panel");
   const closeLoadJobsButton = document.getElementById("close-load-jobs");
   const savedJobsList = document.getElementById("saved-jobs-list");
+  const refreshSharedButton = document.getElementById("refresh-shared");
+  const jobSearchInput = document.getElementById("job-search");
+  const jobListStatus = document.getElementById("job-list-status");
   const storagePill = document.getElementById("storage-pill");
   const savedJobsScope = document.getElementById("saved-jobs-scope");
   const privacyNotice = document.getElementById("privacy-notice");
@@ -188,7 +191,12 @@
   let currentJobId = null;
   let jobCounter = 0;
   let jobStore;
+  let draftStore;
+  let draftTimer = null;
+  let draftPending = false;
   let storageIsShared = false;
+  let refreshingShared = false;
+  let jobSearchQuery = "";
 
   function getStorageBackend() {
     try {
@@ -233,7 +241,9 @@
       storagePill.textContent = "Shared · local network";
       savedJobsScope.textContent = "Newest first · shared on this local network";
       privacyNotice.textContent = "Calculations stay on the local network. No data leaves it.";
+      refreshSharedButton.hidden = false;
     } else {
+      refreshSharedButton.hidden = true;
       storagePill.textContent = "Offline · local only";
       savedJobsScope.textContent = "Newest first · saved on this device only";
       privacyNotice.textContent = "All calculations stay on this device. No data is sent anywhere.";
@@ -299,6 +309,80 @@
   const localStores = createLocalStores();
   truckStore = localStores.truckStore;
   jobStore = localStores.jobStore;
+  draftStore = storageApi ? storageApi.createDraftStore(getStorageBackend()) : null;
+
+  function writeDraft() {
+    if (!draftStore) {
+      return;
+    }
+
+    draftStore.save({
+      name: jobNameInput.value,
+      currentJobId,
+      data: serializeJobState(),
+      updatedAt: new Date().toISOString(),
+    });
+    draftPending = false;
+  }
+
+  function markDraftChanged() {
+    if (!draftStore) {
+      return;
+    }
+
+    draftPending = true;
+    if (draftTimer) {
+      clearTimeout(draftTimer);
+    }
+
+    draftTimer = setTimeout(() => {
+      draftTimer = null;
+      writeDraft();
+    }, 300);
+  }
+
+  function flushDraft() {
+    if (!draftPending) {
+      return;
+    }
+
+    if (draftTimer) {
+      clearTimeout(draftTimer);
+      draftTimer = null;
+    }
+
+    writeDraft();
+  }
+
+  function clearDraft() {
+    if (draftTimer) {
+      clearTimeout(draftTimer);
+      draftTimer = null;
+    }
+
+    draftPending = false;
+    if (draftStore) {
+      draftStore.clear();
+    }
+  }
+
+  function restoreDraft() {
+    if (!draftStore) {
+      return false;
+    }
+
+    const draft = draftStore.load();
+    if (!draft) {
+      return false;
+    }
+
+    hydrateJobState(draft.data);
+    jobNameInput.value = draft.name || "";
+    currentJobId = draft.currentJobId && savedJobs.some((job) => job.id === draft.currentJobId)
+      ? draft.currentJobId
+      : null;
+    return true;
+  }
 
   function format(value) {
     const number = Number(value);
@@ -1196,6 +1280,13 @@
     return truckPresets.find((preset) => preset.id === selectedTruckPresetId) || null;
   }
 
+  function truckValuesMatchPreset(preset) {
+    return state.truck.volumeCapacity === preset.volumeCapacity
+      && state.truck.weightCapacity === preset.weightCapacity
+      && state.truck.pricePerTruck === preset.pricePerTruck
+      && state.truck.fuelConsumption === preset.fuelConsumption;
+  }
+
   function applyPresetToState(preset) {
     state.truck.volumeCapacity = preset.volumeCapacity;
     state.truck.weightCapacity = preset.weightCapacity;
@@ -1515,6 +1606,10 @@
       : jobStore.save({ jobs: savedJobs });
     const savedLabel = storageIsShared ? "Saved to shared storage" : "Saved locally";
 
+    if (saved) {
+      clearDraft();
+    }
+
     setJobStatus(
       saved
         ? `${savedLabel} · ${formatDateTime(now)}`
@@ -1537,6 +1632,14 @@
 
   function renderSavedJobs() {
     savedJobsList.innerHTML = "";
+    const query = jobSearchQuery.trim().toLowerCase();
+    const matchingJobs = query
+      ? savedJobs.filter((job) => (
+        `${job.name} ${job.summary || ""} ${formatSavedAt(job.savedAt)}`
+          .toLowerCase()
+          .includes(query)
+      ))
+      : savedJobs;
 
     if (savedJobs.length === 0) {
       const empty = document.createElement("div");
@@ -1546,7 +1649,15 @@
       return;
     }
 
-    for (const job of savedJobs) {
+    if (matchingJobs.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "job-empty";
+      empty.textContent = "No jobs match your search.";
+      savedJobsList.appendChild(empty);
+      return;
+    }
+
+    for (const job of matchingJobs) {
       const item = document.createElement("div");
       item.className = "job-item";
 
@@ -1583,9 +1694,61 @@
     }
   }
 
-  function openLoadJobs() {
+  async function refreshSharedData() {
+    if (!storageIsShared || refreshingShared) {
+      return;
+    }
+
+    refreshingShared = true;
+    refreshSharedButton.disabled = true;
+    jobListStatus.textContent = "Refreshing shared data...";
+    const failed = [];
+    const results = await Promise.allSettled([
+      jobStore.refresh(),
+      truckStore.refresh(),
+    ]);
+
+    if (results[0].status === "fulfilled") {
+      savedJobs = results[0].value.jobs;
+    } else {
+      failed.push("jobs");
+    }
+
+    if (results[1].status === "fulfilled") {
+      const previousSelectedId = selectedTruckPresetId;
+      truckPresets = results[1].value.presets;
+
+      if (previousSelectedId && truckPresets.some((preset) => preset.id === previousSelectedId)) {
+        selectedTruckPresetId = previousSelectedId;
+        const preset = getSelectedTruckPreset();
+        truckDirty = preset ? !truckValuesMatchPreset(preset) : truckDirty;
+      } else if (previousSelectedId) {
+        selectedTruckPresetId = null;
+        truckDirty = true;
+      }
+
+      renderTruckPresetOptions();
+      updateTruckPresetStatus();
+    } else {
+      failed.push("presets");
+    }
+
     renderSavedJobs();
+    jobListStatus.textContent = failed.length === 0
+      ? "Shared data updated."
+      : `Could not refresh ${failed.join(" or ")}. Showing the last loaded data.`;
+    refreshingShared = false;
+    refreshSharedButton.disabled = false;
+  }
+
+  async function openLoadJobs() {
     loadJobsPanel.hidden = false;
+    jobListStatus.textContent = "";
+    renderSavedJobs();
+
+    if (storageIsShared) {
+      await refreshSharedData();
+    }
   }
 
   function closeLoadJobs() {
@@ -1600,6 +1763,7 @@
     updateTruckPresetStatus();
     syncStaticControls();
     renderSections();
+    markDraftChanged();
     setJobStatus(`Loaded · ${job.name}`);
     closeLoadJobs();
   }
@@ -1616,6 +1780,7 @@
 
     if (currentJobId === job.id) {
       currentJobId = null;
+      clearDraft();
       setJobStatus("Unsaved job");
     }
 
@@ -1823,6 +1988,7 @@
       });
       renderDeliveries();
       update();
+      markDraftChanged();
       return;
     }
 
@@ -1839,6 +2005,7 @@
     state.deliveries = state.deliveries.filter((item) => item.id !== card.dataset.deliveryId);
     renderDeliveries();
     update();
+    markDraftChanged();
   }
 
   function syncTravelControls() {
@@ -1966,6 +2133,7 @@
         state.sections = [createSection()];
       }
       renderSections();
+      markDraftChanged();
       return;
     }
 
@@ -1978,6 +2146,7 @@
       };
       state.sections.splice(index + 1, 0, copy);
       renderSections();
+      markDraftChanged();
     }
   }
 
@@ -2040,6 +2209,7 @@
     state.deliveries.push(createDeliveryItem());
     syncDeliveryControls();
     update();
+    markDraftChanged();
     const last = deliveriesContainer.lastElementChild;
     if (last) {
       last.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2123,6 +2293,25 @@
   saveJobButton.addEventListener("click", saveJob);
   loadJobsButton.addEventListener("click", openLoadJobs);
   closeLoadJobsButton.addEventListener("click", closeLoadJobs);
+  refreshSharedButton.addEventListener("click", refreshSharedData);
+  jobSearchInput.addEventListener("input", () => {
+    jobSearchQuery = jobSearchInput.value;
+    renderSavedJobs();
+  });
+
+  document.addEventListener("input", (event) => {
+    if (event.target.closest("#load-jobs-panel")) {
+      return;
+    }
+    markDraftChanged();
+  }, true);
+  document.addEventListener("change", (event) => {
+    if (event.target.closest("#load-jobs-panel")) {
+      return;
+    }
+    markDraftChanged();
+  }, true);
+  window.addEventListener("beforeunload", flushDraft);
 
   loadJobsPanel.addEventListener("click", (event) => {
     if (event.target === loadJobsPanel) {
@@ -2158,6 +2347,7 @@
   addSectionButton.addEventListener("click", () => {
     state.sections.push(createSection());
     renderSections();
+    markDraftChanged();
     const lastCard = sectionsEl.lastElementChild;
     if (lastCard) {
       lastCard.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2172,6 +2362,7 @@
     if (!window.confirm("Start a new job? Unsaved changes will be lost.")) {
       return;
     }
+    clearDraft();
     state.removalsEnabled = true;
     state.sections = [createSection()];
     state.deliveries = [createDeliveryItem()];
@@ -2193,8 +2384,15 @@
     updateStorageLabels();
     await initJobs();
     await initTruckPresets();
+    const restored = restoreDraft();
     syncStaticControls();
     renderSections();
+
+    if (restored) {
+      renderTruckPresetOptions();
+      updateTruckPresetStatus();
+      setJobStatus("Draft restored");
+    }
   }
 
   init();

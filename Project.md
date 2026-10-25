@@ -212,6 +212,12 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   Loading replaces the current job. Jobs can be deleted from the list.
 - Save updates the currently loaded job. New clears the current job ID and name,
   keeps the truck settings and saved presets, and starts a blank job.
+- The current job is autosaved as a local draft. Drafts are per device and are
+  never written to the shared Docker store. A draft clears on Save or New and is
+  restored after an accidental reload.
+- The Load panel searches saved jobs by name, summary or saved date.
+- In Docker shared mode, opening Load refreshes shared jobs and truck presets.
+  A Refresh button repeats the refresh.
 - Storage is versioned.
 - The browser build uses `localStorage` when no Docker API is available.
 - The Docker Compose build uses the shared server API and stores one job per JSON file.
@@ -324,9 +330,6 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   the app leans toward an extra truck rather than an overloaded one.
 - **Material preset table**: topsoil, sand, gravel, crushed rock, clay, concrete
   rubble - each with a default price, swell and settling values, all editable.
-- **Autosave the current job** locally so an accidental close doesn't lose it.
-- **Job search / filter** once there are many saved jobs; show recent jobs on the
-  start-up screen.
 - **Copy summary** to clipboard (text only) for pasting into a note or message.
 - **Price rounding display** option: nearest $1 / $5 / $10.
 - **Validation and warnings**: zero/negative dimensions, weight over capacity,

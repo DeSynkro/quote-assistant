@@ -11,6 +11,8 @@
   const SCHEMA_VERSION = 1;
   const JOB_KEY = "quote-assistant.jobs";
   const JOB_SCHEMA_VERSION = 1;
+  const DRAFT_KEY = "quote-assistant.draft";
+  const DRAFT_SCHEMA_VERSION = 1;
 
   function normalizePreset(value) {
     if (!value || typeof value !== "object") {
@@ -174,33 +176,37 @@
   function createRemoteStore(baseUrl, fetchImpl) {
     const fetcher = getFetch(fetchImpl);
 
-    async function load() {
+    async function refresh() {
       if (!fetcher) {
-        return { presets: [], selectedId: null };
+        throw new Error("Shared presets are unavailable.");
       }
 
+      const response = await fetcher(apiUrl(baseUrl, "/presets"), {
+        cache: "no-store",
+        headers: { accept: "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not refresh shared presets.");
+      }
+
+      const data = await response.json();
+      if (!data || data.schemaVersion !== SCHEMA_VERSION || !Array.isArray(data.presets)) {
+        throw new Error("Shared presets are not valid.");
+      }
+
+      const presets = data.presets.map(normalizePreset).filter(Boolean);
+      const selectedId = typeof data.selectedId === "string"
+        && presets.some((preset) => preset.id === data.selectedId)
+        ? data.selectedId
+        : null;
+
+      return { presets, selectedId };
+    }
+
+    async function load() {
       try {
-        const response = await fetcher(apiUrl(baseUrl, "/presets"), {
-          cache: "no-store",
-          headers: { accept: "application/json" },
-        });
-
-        if (!response.ok) {
-          return { presets: [], selectedId: null };
-        }
-
-        const data = await response.json();
-        if (!data || data.schemaVersion !== SCHEMA_VERSION || !Array.isArray(data.presets)) {
-          return { presets: [], selectedId: null };
-        }
-
-        const presets = data.presets.map(normalizePreset).filter(Boolean);
-        const selectedId = typeof data.selectedId === "string"
-          && presets.some((preset) => preset.id === data.selectedId)
-          ? data.selectedId
-          : null;
-
-        return { presets, selectedId };
+        return await refresh();
       } catch (error) {
         return { presets: [], selectedId: null };
       }
@@ -237,35 +243,38 @@
       }
     }
 
-    return { load, save };
+    return { load, save, refresh };
   }
 
   function createRemoteJobStore(baseUrl, fetchImpl) {
     const fetcher = getFetch(fetchImpl);
     let cached = new Map();
 
-    async function load() {
+    async function refresh() {
       if (!fetcher) {
-        return { jobs: [] };
+        throw new Error("Shared jobs are unavailable.");
       }
 
+      const response = await fetcher(apiUrl(baseUrl, "/jobs"), {
+        cache: "no-store",
+        headers: { accept: "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not refresh shared jobs.");
+      }
+
+      const data = await response.json();
+      const jobs = data && Array.isArray(data.jobs)
+        ? data.jobs.map(normalizeJob).filter(Boolean)
+        : [];
+      cached = new Map(jobs.map((job) => [job.id, JSON.stringify(job)]));
+      return { jobs };
+    }
+
+    async function load() {
       try {
-        const response = await fetcher(apiUrl(baseUrl, "/jobs"), {
-          cache: "no-store",
-          headers: { accept: "application/json" },
-        });
-
-        if (!response.ok) {
-          cached = new Map();
-          return { jobs: [] };
-        }
-
-        const data = await response.json();
-        const jobs = data && Array.isArray(data.jobs)
-          ? data.jobs.map(normalizeJob).filter(Boolean)
-          : [];
-        cached = new Map(jobs.map((job) => [job.id, JSON.stringify(job)]));
-        return { jobs };
+        return await refresh();
       } catch (error) {
         cached = new Map();
         return { jobs: [] };
@@ -316,7 +325,83 @@
       }
     }
 
-    return { load, save };
+    return { load, save, refresh };
+  }
+
+  function createDraftStore(backend) {
+    function load() {
+      if (!backend) {
+        return null;
+      }
+
+      try {
+        const raw = backend.getItem(DRAFT_KEY);
+        if (!raw) {
+          return null;
+        }
+
+        const data = JSON.parse(raw);
+        if (!data || data.schemaVersion !== DRAFT_SCHEMA_VERSION) {
+          return null;
+        }
+
+        if (!data.data || typeof data.data !== "object" || Array.isArray(data.data)) {
+          return null;
+        }
+
+        return {
+          name: typeof data.name === "string" ? data.name : "",
+          currentJobId: typeof data.currentJobId === "string" && data.currentJobId
+            ? data.currentJobId
+            : null,
+          data: data.data,
+          updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : "",
+        };
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function save(draft) {
+      if (!backend) {
+        return false;
+      }
+
+      try {
+        const source = draft || {};
+        if (!source.data || typeof source.data !== "object" || Array.isArray(source.data)) {
+          return false;
+        }
+
+        backend.setItem(DRAFT_KEY, JSON.stringify({
+          schemaVersion: DRAFT_SCHEMA_VERSION,
+          name: typeof source.name === "string" ? source.name : "",
+          currentJobId: typeof source.currentJobId === "string" && source.currentJobId
+            ? source.currentJobId
+            : null,
+          data: source.data,
+          updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : "",
+        }));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function clear() {
+      if (!backend) {
+        return false;
+      }
+
+      try {
+        backend.removeItem(DRAFT_KEY);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    return { load, save, clear };
   }
 
   return {
@@ -324,8 +409,11 @@
     SCHEMA_VERSION,
     JOB_KEY,
     JOB_SCHEMA_VERSION,
+    DRAFT_KEY,
+    DRAFT_SCHEMA_VERSION,
     createStore,
     createJobStore,
+    createDraftStore,
     createRemoteStore,
     createRemoteJobStore,
   };

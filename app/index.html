@@ -335,9 +335,17 @@
   <div class="dialog" role="dialog" aria-modal="true" aria-label="Load job">
     <div class="dialog-head">
       <h2>Load job</h2>
-      <button class="icon-btn" id="close-load-jobs" type="button">Close</button>
+      <div class="dialog-actions">
+        <button class="btn small" id="refresh-shared" type="button" hidden>Refresh</button>
+        <button class="icon-btn" id="close-load-jobs" type="button">Close</button>
+      </div>
     </div>
     <div class="small muted" id="saved-jobs-scope">Newest first · saved on this device only</div>
+    <label class="job-search">
+      <span class="small muted">Search jobs</span>
+      <input id="job-search" type="search" placeholder="Job name or date" autocomplete="off">
+    </label>
+    <div class="small muted" id="job-list-status"></div>
     <div id="saved-jobs-list"></div>
   </div>
 </div>
