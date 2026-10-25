@@ -574,7 +574,13 @@
         ? [source.delivery]
         : [];
     const delivery = aggregateDeliveries(
-      deliverySources.map((item) => calculateDelivery(item, truck, source.pricePerTruck))
+      deliverySources.map((item, index) => {
+        const result = calculateDelivery(item, truck, source.pricePerTruck);
+        return {
+          ...result,
+          warnings: result.warnings.map((warning) => ({ ...warning, deliveryIndex: index })),
+        };
+      })
     );
 
     if (delivery) {

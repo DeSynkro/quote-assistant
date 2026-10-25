@@ -11,6 +11,8 @@
   const saveJobButton = document.getElementById("save-job");
   const loadJobsButton = document.getElementById("load-jobs");
   const jobStatusOutput = document.getElementById("job-status");
+  const jobDirtyPill = document.getElementById("job-dirty");
+  const jobStorageNote = document.getElementById("job-storage-note");
   const loadJobsPanel = document.getElementById("load-jobs-panel");
   const closeLoadJobsButton = document.getElementById("close-load-jobs");
   const savedJobsList = document.getElementById("saved-jobs-list");
@@ -52,6 +54,7 @@
   const mobileEstimateTrucksOutput = document.getElementById("mobile-estimate-trucks");
   const mobileEstimatePriceOutput = document.getElementById("mobile-estimate-price");
   const resultsEl = document.querySelector(".results");
+  const toastsEl = document.getElementById("toasts");
   const warningsOutput = document.getElementById("warnings");
   const mathsOutput = document.getElementById("maths");
   const deliveryEnabledInput = document.getElementById("delivery-enabled");
@@ -71,6 +74,9 @@
   const combinedSubOutput = document.getElementById("result-combined-sub");
   const travelEnabledInput = document.getElementById("travel-enabled");
   const travelCard = document.getElementById("travel-card");
+  const travelDistanceInput = document.getElementById("travel-distance");
+  const travelManualTripsInput = document.getElementById("travel-manual-trips");
+  const travelManualFuelInput = document.getElementById("travel-manual-fuel");
   const travelManualTripsField = document.getElementById("travel-manual-trips-field");
   const travelManualFuelField = document.getElementById("travel-manual-fuel-field");
   const travelDieselField = document.getElementById("travel-diesel-field");
@@ -202,7 +208,9 @@
   let storageIsShared = false;
   let refreshingShared = false;
   let jobSearchQuery = "";
-  let copySummaryTimer = null;
+  let jobDirty = false;
+  let lastDeletedJob = null;
+  let undoToastDismiss = null;
 
   function getStorageBackend() {
     try {
@@ -248,10 +256,12 @@
       savedJobsScope.textContent = "Newest first · shared on this local network";
       privacyNotice.textContent = "Calculations stay on the local network. No data leaves it.";
       refreshSharedButton.hidden = false;
+      jobStorageNote.textContent = "Saved jobs are shared on this network.";
     } else {
       refreshSharedButton.hidden = true;
       storagePill.textContent = "Offline · local only";
       savedJobsScope.textContent = "Newest first · saved on this device only";
+      jobStorageNote.textContent = "Saved jobs stay on this device.";
       privacyNotice.textContent = "All calculations stay on this device. No data is sent anywhere.";
     }
   }
@@ -1085,7 +1095,116 @@
     }
   }
 
+  function markWarningField(input) {
+    if (!input) {
+      return;
+    }
+
+    const field = input.closest(".field");
+    if (field) {
+      field.classList.add("warning-field");
+    }
+    input.setAttribute("aria-invalid", "true");
+  }
+
+  function clearWarningHighlights() {
+    for (const element of document.querySelectorAll(".warning-card")) {
+      element.classList.remove("warning-card");
+    }
+    for (const element of document.querySelectorAll(".warning-field")) {
+      element.classList.remove("warning-field");
+    }
+    for (const element of document.querySelectorAll('[aria-invalid="true"]')) {
+      element.removeAttribute("aria-invalid");
+    }
+  }
+
+  function applyWarningHighlights(warnings) {
+    const truckCard = truckVolumeInput.closest(".card");
+
+    for (const warning of warnings) {
+      if (warning.code === "missing-depth" && Number.isInteger(warning.sectionIndex)) {
+        const section = state.sections[warning.sectionIndex];
+        const card = section
+          ? sectionsEl.querySelector(`.section-card[data-section-id="${section.id}"]`)
+          : null;
+        if (card) {
+          card.classList.add("warning-card");
+          markWarningField(card.querySelector('[data-field="depth"]'));
+        }
+        continue;
+      }
+
+      if (warning.code === "zero-volume" && Number.isInteger(warning.sectionIndex)) {
+        const section = state.sections[warning.sectionIndex];
+        const card = section
+          ? sectionsEl.querySelector(`.section-card[data-section-id="${section.id}"]`)
+          : null;
+        if (card) {
+          card.classList.add("warning-card");
+        }
+        continue;
+      }
+
+      if (warning.code === "no-sections") {
+        removalsCard.classList.add("warning-card");
+        continue;
+      }
+
+      if (warning.code === "missing-truck-capacity" || warning.code === "material-missing-truck-capacity") {
+        if (truckCard) {
+          truckCard.classList.add("warning-card");
+        }
+        markWarningField(truckVolumeInput);
+        markWarningField(truckWeightInput);
+        continue;
+      }
+
+      if (warning.code.startsWith("material-")) {
+        const item = state.deliveries[warning.deliveryIndex];
+        const card = item
+          ? deliveriesContainer.querySelector(`.delivery-item[data-delivery-id="${item.id}"]`)
+          : null;
+        if (!card) {
+          continue;
+        }
+
+        card.classList.add("warning-card");
+        if (warning.code === "material-missing-amount") {
+          if (item.amountBasis === "area") {
+            for (const input of card.querySelectorAll("[data-delivery-area-fields] input")) {
+              markWarningField(input);
+            }
+          } else {
+            markWarningField(card.querySelector('[data-delivery-field="amount"]'));
+          }
+        } else if (warning.code === "material-missing-price") {
+          markWarningField(card.querySelector('[data-delivery-field="price"]'));
+        } else if (warning.code === "material-missing-custom-fee") {
+          markWarningField(card.querySelector('[data-delivery-field="customFee"]'));
+        }
+        continue;
+      }
+
+      if (warning.code.startsWith("travel-")) {
+        travelCard.classList.add("warning-card");
+        if (warning.code === "travel-missing-distance") {
+          markWarningField(travelDistanceInput);
+        } else if (warning.code === "travel-missing-trips" && !state.travel.useCalculatedTrips) {
+          markWarningField(travelManualTripsInput);
+        } else if (warning.code === "travel-missing-price-per-km") {
+          markWarningField(travelPricePerKmInput);
+        } else if (warning.code === "travel-missing-fuel") {
+          markWarningField(state.travel.useTruckFuel ? truckFuelInput : travelManualFuelInput);
+        } else if (warning.code === "travel-missing-diesel") {
+          markWarningField(travelDieselInput);
+        }
+      }
+    }
+  }
+
   function updateResults(result) {
+    clearWarningHighlights();
     const totals = result.totals;
     const delivery = totals.delivery;
     const travel = totals.travel;
@@ -1264,6 +1383,7 @@
       }
     }
 
+    applyWarningHighlights(result.warnings);
     updateTravelNotes(result);
     updateMaths(result);
   }
@@ -1408,6 +1528,10 @@
     renderTruckPresetOptions();
     updateTruckPresetStatus();
     setPresetWarning(saved ? "" : "Presets could not be saved.");
+    showToast(
+      saved ? "Truck preset saved." : "Presets could not be saved.",
+      { tone: saved ? "success" : "error" }
+    );
   }
 
   async function deleteTruckPreset() {
@@ -1429,6 +1553,10 @@
     renderTruckPresetOptions();
     updateTruckPresetStatus();
     setPresetWarning(saved ? "" : "Presets could not be saved.");
+    showToast(
+      saved ? "Truck preset deleted." : "Presets could not be saved.",
+      { tone: saved ? "success" : "error" }
+    );
   }
 
   async function handleTruckPresetChange() {
@@ -1483,6 +1611,69 @@
     jobStatusOutput.classList.toggle("warn", Boolean(warn));
   }
 
+  function setJobDirty(dirty) {
+    jobDirty = Boolean(dirty);
+    jobDirtyPill.hidden = !jobDirty;
+  }
+
+  function markJobChanged() {
+    setJobDirty(true);
+    markDraftChanged();
+  }
+
+  function showToast(message, options) {
+    const settings = options || {};
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    if (settings.tone === "error") {
+      toast.classList.add("error");
+    }
+
+    const text = document.createElement("span");
+    text.className = "toast-message";
+    text.textContent = message;
+    toast.appendChild(text);
+
+    let dismissed = false;
+    let timer = null;
+
+    function dismiss() {
+      if (dismissed) {
+        return;
+      }
+
+      dismissed = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      toast.classList.remove("visible");
+      toast.classList.add("leaving");
+      setTimeout(() => toast.remove(), 220);
+    }
+
+    if (settings.actionLabel && typeof settings.onAction === "function") {
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "toast-action";
+      action.textContent = settings.actionLabel;
+      action.addEventListener("click", () => {
+        settings.onAction();
+        dismiss();
+      });
+      toast.appendChild(action);
+    }
+
+    toastsEl.appendChild(toast);
+    while (toastsEl.children.length > 3) {
+      toastsEl.firstElementChild.remove();
+    }
+
+    requestAnimationFrame(() => toast.classList.add("visible"));
+    const duration = Number.isFinite(settings.duration) ? settings.duration : 4000;
+    timer = setTimeout(dismiss, duration);
+    return dismiss;
+  }
+
   async function copyText(text) {
     let copied = false;
 
@@ -1521,18 +1712,10 @@
       summaryOutput.textContent.trim(),
     ].join("\n");
     const copied = await copyText(text);
-    copySummaryButton.textContent = copied ? "Copied" : "Could not copy";
-    copySummaryButton.classList.toggle("warn", !copied);
-
-    if (copySummaryTimer) {
-      clearTimeout(copySummaryTimer);
-    }
-
-    copySummaryTimer = setTimeout(() => {
-      copySummaryButton.textContent = "Copy summary";
-      copySummaryButton.classList.remove("warn");
-      copySummaryTimer = null;
-    }, 1800);
+    showToast(
+      copied ? "Summary copied." : "Could not copy the summary.",
+      { tone: copied ? "success" : "error" }
+    );
   }
 
   function formatDateTime(date) {
@@ -1668,6 +1851,7 @@
 
     if (saved) {
       clearDraft();
+      setJobDirty(false);
     }
 
     setJobStatus(
@@ -1675,6 +1859,12 @@
         ? `${savedLabel} · ${formatDateTime(now)}`
         : "Could not save this job.",
       !saved
+    );
+    showToast(
+      saved
+        ? (storageIsShared ? "Job saved to shared storage." : "Job saved locally.")
+        : "Could not save this job.",
+      { tone: saved ? "success" : "error" }
     );
   }
 
@@ -1831,6 +2021,7 @@
     syncStaticControls();
     renderSections();
     markDraftChanged();
+    setJobDirty(false);
     setJobStatus(`Loaded · ${job.name}`);
     closeLoadJobs();
   }
@@ -1843,13 +2034,41 @@
     updateTruckPresetStatus();
     syncStaticControls();
     renderSections();
-    markDraftChanged();
+    markJobChanged();
     setJobStatus(`Unsaved copy · ${job.name}`);
+    showToast("Created an unsaved copy.");
     closeLoadJobs();
   }
 
+  async function undoDelete() {
+    if (!lastDeletedJob) {
+      return;
+    }
+
+    const deleted = lastDeletedJob;
+    lastDeletedJob = null;
+    undoToastDismiss = null;
+    const index = Math.max(0, Math.min(deleted.index, savedJobs.length));
+    savedJobs = [
+      ...savedJobs.slice(0, index),
+      deleted.job,
+      ...savedJobs.slice(index),
+    ];
+    renderSavedJobs();
+    const saved = storageIsShared
+      ? await jobStore.save({ jobs: savedJobs })
+      : jobStore.save({ jobs: savedJobs });
+
+    if (saved) {
+      showToast("Job restored.", { tone: "success" });
+    } else {
+      showToast("Could not restore the job.", { tone: "error" });
+    }
+  }
+
   async function deleteJob(job) {
-    if (!window.confirm(`Delete job "${job.name}"?`)) {
+    const index = savedJobs.findIndex((item) => item.id === job.id);
+    if (index === -1) {
       return;
     }
 
@@ -1861,6 +2080,7 @@
     if (currentJobId === job.id) {
       currentJobId = null;
       clearDraft();
+      setJobDirty(true);
       setJobStatus("Unsaved job");
     }
 
@@ -1869,6 +2089,16 @@
     if (!saved) {
       setJobStatus("Could not save this change.", true);
     }
+
+    lastDeletedJob = { job, index };
+    if (undoToastDismiss) {
+      undoToastDismiss();
+    }
+    undoToastDismiss = showToast(`Deleted "${job.name}".`, {
+      actionLabel: "Undo",
+      duration: 10000,
+      onAction: undoDelete,
+    });
   }
 
   async function initJobs() {
@@ -1912,6 +2142,7 @@
     URL.revokeObjectURL(url);
 
     setDataStatus(`Exported ${countLabel(savedJobs.length, "job", "jobs")} and ${countLabel(truckPresets.length, "preset", "presets")}.`);
+    showToast("Backup exported.");
   }
 
   async function importDataFile(file) {
@@ -1948,16 +2179,20 @@
 
       if (parsed.jobs.length === 0 && parsed.presets.length === 0) {
         setDataStatus("No jobs or presets found in that file.", true);
+        showToast("No jobs or presets found in that file.", { tone: "error" });
       } else if (!presetsSaved || !jobsSaved) {
         setDataStatus(
           `Imported ${countLabel(parsed.jobs.length, "job", "jobs")} and ${countLabel(parsed.presets.length, "preset", "presets")}, but could not save everything.`,
           true
         );
+        showToast("Imported data, but could not save everything.", { tone: "error" });
       } else {
         setDataStatus(`Imported ${countLabel(parsed.jobs.length, "job", "jobs")} and ${countLabel(parsed.presets.length, "preset", "presets")}.`);
+        showToast("Import completed.");
       }
     } catch (error) {
       setDataStatus(error.message || "Could not import that file.", true);
+      showToast(error.message || "Could not import that file.", { tone: "error" });
     }
   }
 
@@ -2068,7 +2303,7 @@
       });
       renderDeliveries();
       update();
-      markDraftChanged();
+      markJobChanged();
       return;
     }
 
@@ -2085,7 +2320,7 @@
     state.deliveries = state.deliveries.filter((item) => item.id !== card.dataset.deliveryId);
     renderDeliveries();
     update();
-    markDraftChanged();
+    markJobChanged();
   }
 
   function syncTravelControls() {
@@ -2213,7 +2448,7 @@
         state.sections = [createSection()];
       }
       renderSections();
-      markDraftChanged();
+      markJobChanged();
       return;
     }
 
@@ -2226,7 +2461,7 @@
       };
       state.sections.splice(index + 1, 0, copy);
       renderSections();
-      markDraftChanged();
+      markJobChanged();
     }
   }
 
@@ -2289,7 +2524,7 @@
     state.deliveries.push(createDeliveryItem());
     syncDeliveryControls();
     update();
-    markDraftChanged();
+    markJobChanged();
     const last = deliveriesContainer.lastElementChild;
     if (last) {
       last.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2383,17 +2618,31 @@
     renderSavedJobs();
   });
 
+  document.addEventListener("focusin", (event) => {
+    if (event.target.matches('input[type="number"]')) {
+      event.target.select();
+    }
+  });
+
   document.addEventListener("input", (event) => {
-    if (event.target.closest("#load-jobs-panel")) {
+    if (
+      event.target.closest("#load-jobs-panel")
+      || event.target.id === "preset-name"
+      || event.target.id === "import-file"
+    ) {
       return;
     }
-    markDraftChanged();
+    markJobChanged();
   }, true);
   document.addEventListener("change", (event) => {
-    if (event.target.closest("#load-jobs-panel")) {
+    if (
+      event.target.closest("#load-jobs-panel")
+      || event.target.id === "preset-name"
+      || event.target.id === "import-file"
+    ) {
       return;
     }
-    markDraftChanged();
+    markJobChanged();
   }, true);
   window.addEventListener("beforeunload", flushDraft);
 
@@ -2440,7 +2689,7 @@
   addSectionButton.addEventListener("click", () => {
     state.sections.push(createSection());
     renderSections();
-    markDraftChanged();
+    markJobChanged();
     const lastCard = sectionsEl.lastElementChild;
     if (lastCard) {
       lastCard.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2456,6 +2705,7 @@
       return;
     }
     clearDraft();
+    setJobDirty(false);
     state.removalsEnabled = true;
     state.sections = [createSection()];
     state.deliveries = [createDeliveryItem()];
@@ -2478,6 +2728,7 @@
     const observer = new IntersectionObserver((entries) => {
       const visible = Boolean(entries[0] && entries[0].isIntersecting);
       mobileEstimateButton.classList.toggle("is-hidden", visible);
+      toastsEl.classList.toggle("with-estimate", !visible);
       mobileEstimateButton.tabIndex = visible ? -1 : 0;
       mobileEstimateButton.setAttribute("aria-hidden", String(visible));
     }, {
@@ -2504,6 +2755,7 @@
       updateTruckPresetStatus();
       setJobStatus("Draft restored");
     }
+    setJobDirty(restored);
 
     setupMobileEstimateObserver();
   }

@@ -48,7 +48,12 @@ The calculation engine, estimator UI and Docker Compose LAN version are working.
 - Search saved jobs by name, summary or date
 - Refresh shared jobs and presets from the Load panel
 - Duplicate a saved job into a new unsaved copy
+- Undo a saved job deletion for 10 seconds
+- Unsaved changes indicator in the job bar
 - Copy the current estimate summary to the clipboard
+- Toast notifications for saves, copies, imports and deletions
+- Warning highlights on the fields that need attention
+- Numeric inputs select their value when focused
 - Mobile sticky estimate bar for quick price and truck access, hidden once the estimate is in view
 - Automatic timestamp names when a job is unnamed
 - Export and import jobs and truck presets as JSON

@@ -940,6 +940,16 @@
         },
       },
       {
+        name: "keeps the delivery index on delivery warnings",
+        run() {
+          const job = sampleJob();
+          job.delivery = sampleDelivery({ amount: 0, price: 0 });
+          const result = Calc.calculateJob(job);
+          const warning = result.warnings.find((entry) => entry.code === "material-missing-amount");
+          equal(warning.deliveryIndex, 0, "delivery index");
+        },
+      },
+      {
         name: "adds delivery to the job totals",
         run() {
           const job = sampleJob();

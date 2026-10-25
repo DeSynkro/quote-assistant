@@ -217,10 +217,19 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
   restored after an accidental reload.
 - The Load panel searches saved jobs by name, summary or saved date.
 - Saved jobs can be duplicated into a new unsaved copy.
+- Deleting a saved job shows an Undo toast for 10 seconds. The delete confirmation
+  is replaced by this undo window.
+- The job bar shows an Unsaved changes pill after edits and hides it after Save,
+  Load or New. A restored draft counts as unsaved.
 - In Docker shared mode, opening Load refreshes shared jobs and truck presets.
   A Refresh button repeats the refresh.
 - The estimate panel has a Copy summary button. The text includes the job name,
   truck count, charge and the plain-language summary.
+- Toasts confirm saves, deletes, duplicates, copies, imports and preset changes.
+  Error toasts use the warning colour.
+- Validation warnings highlight the related section, material, truck or travel
+  field, and set `aria-invalid` on the input.
+- Number inputs select their contents when focused.
 - On narrow screens a fixed estimate bar shows the price and truck count. Tapping
   it scrolls to the full estimate. The bar fades out while the estimate section
   is visible.
