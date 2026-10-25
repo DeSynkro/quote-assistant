@@ -54,6 +54,8 @@ The calculation engine, estimator UI and Docker Compose LAN version are working.
 - Toast notifications for saves, copies, imports and deletions
 - Warning highlights on the fields that need attention
 - Numeric inputs select their value when focused
+- Preferences for theme, measurement decimals, reduced motion and autosave
+- Light, dark and system themes
 - Mobile sticky estimate bar for quick price and truck access, hidden once the estimate is in view
 - Automatic timestamp names when a job is unnamed
 - Export and import jobs and truck presets as JSON

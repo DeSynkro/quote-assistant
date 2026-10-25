@@ -12,6 +12,14 @@
   const loadJobsButton = document.getElementById("load-jobs");
   const jobStatusOutput = document.getElementById("job-status");
   const jobDirtyPill = document.getElementById("job-dirty");
+  const openPreferencesButton = document.getElementById("open-preferences");
+  const closePreferencesButton = document.getElementById("close-preferences");
+  const preferencesPanel = document.getElementById("preferences-panel");
+  const themeChoiceButtons = Array.from(document.querySelectorAll("[data-theme-choice]"));
+  const decimalsChoiceButtons = Array.from(document.querySelectorAll("[data-decimals-choice]"));
+  const reduceMotionInput = document.getElementById("pref-reduce-motion");
+  const autosaveInput = document.getElementById("pref-autosave");
+  const resetPreferencesButton = document.getElementById("reset-preferences");
   const jobStorageNote = document.getElementById("job-storage-note");
   const loadJobsPanel = document.getElementById("load-jobs-panel");
   const closeLoadJobsButton = document.getElementById("close-load-jobs");
@@ -203,6 +211,7 @@
   let jobCounter = 0;
   let jobStore;
   let draftStore;
+  let preferencesStore;
   let draftTimer = null;
   let draftPending = false;
   let storageIsShared = false;
@@ -211,6 +220,17 @@
   let jobDirty = false;
   let lastDeletedJob = null;
   let undoToastDismiss = null;
+
+  const FALLBACK_PREFERENCES = Object.freeze({
+    theme: "dark",
+    decimals: 1,
+    reduceMotion: false,
+    autosave: true,
+  });
+  const themeMedia = typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: light)")
+    : null;
+  let preferences = { ...FALLBACK_PREFERENCES };
 
   function getStorageBackend() {
     try {
@@ -264,6 +284,47 @@
       jobStorageNote.textContent = "Saved jobs stay on this device.";
       privacyNotice.textContent = "All calculations stay on this device. No data is sent anywhere.";
     }
+  }
+
+  function applyTheme() {
+    const resolved = preferences.theme === "system"
+      ? (themeMedia && themeMedia.matches ? "light" : "dark")
+      : preferences.theme;
+    document.documentElement.dataset.theme = resolved === "light" ? "light" : "dark";
+  }
+
+  function applyPreferences() {
+    applyTheme();
+    document.documentElement.dataset.reduceMotion = preferences.reduceMotion ? "true" : "false";
+  }
+
+  function renderPreferences() {
+    for (const button of themeChoiceButtons) {
+      const active = button.dataset.themeChoice === preferences.theme;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+
+    for (const button of decimalsChoiceButtons) {
+      const active = Number(button.dataset.decimalsChoice) === preferences.decimals;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+
+    reduceMotionInput.checked = preferences.reduceMotion;
+    autosaveInput.checked = preferences.autosave;
+  }
+
+  function savePreferences() {
+    if (!preferencesStore) {
+      return false;
+    }
+
+    const saved = preferencesStore.save(preferences);
+    if (!saved) {
+      showToast("Could not save preferences.", { tone: "error" });
+    }
+    return saved;
   }
 
   function getApiBase() {
@@ -326,6 +387,8 @@
   truckStore = localStores.truckStore;
   jobStore = localStores.jobStore;
   draftStore = storageApi ? storageApi.createDraftStore(getStorageBackend()) : null;
+  preferencesStore = storageApi ? storageApi.createPreferenceStore(getStorageBackend()) : null;
+  preferences = preferencesStore ? preferencesStore.load() : { ...FALLBACK_PREFERENCES };
 
   function writeDraft() {
     if (!draftStore) {
@@ -342,7 +405,7 @@
   }
 
   function markDraftChanged() {
-    if (!draftStore) {
+    if (!draftStore || !preferences.autosave) {
       return;
     }
 
@@ -383,7 +446,7 @@
   }
 
   function restoreDraft() {
-    if (!draftStore) {
+    if (!draftStore || !preferences.autosave) {
       return false;
     }
 
@@ -406,7 +469,7 @@
       return "0";
     }
     return new Intl.NumberFormat(undefined, {
-      maximumFractionDigits: 3,
+      maximumFractionDigits: preferences.decimals,
     }).format(number);
   }
 
@@ -2013,6 +2076,66 @@
     loadJobsPanel.hidden = true;
   }
 
+  function openPreferences() {
+    renderPreferences();
+    preferencesPanel.hidden = false;
+    closePreferencesButton.focus();
+  }
+
+  function closePreferences() {
+    preferencesPanel.hidden = true;
+    openPreferencesButton.focus();
+  }
+
+  function setThemePreference(theme) {
+    preferences = { ...preferences, theme };
+    savePreferences();
+    applyPreferences();
+    renderPreferences();
+  }
+
+  function setDecimalsPreference(decimals) {
+    preferences = { ...preferences, decimals };
+    savePreferences();
+    renderPreferences();
+    update();
+    renderSavedJobs();
+  }
+
+  function setReduceMotionPreference(reduceMotion) {
+    preferences = { ...preferences, reduceMotion };
+    savePreferences();
+    applyPreferences();
+    renderPreferences();
+  }
+
+  function setAutosavePreference(autosave) {
+    preferences = { ...preferences, autosave };
+    savePreferences();
+    if (autosave) {
+      markDraftChanged();
+    } else {
+      clearDraft();
+    }
+    renderPreferences();
+  }
+
+  function resetPreferences() {
+    const defaults = preferencesStore ? preferencesStore.defaults : FALLBACK_PREFERENCES;
+    preferences = { ...defaults };
+    savePreferences();
+    applyPreferences();
+    if (preferences.autosave) {
+      markDraftChanged();
+    } else {
+      clearDraft();
+    }
+    renderPreferences();
+    update();
+    renderSavedJobs();
+    showToast("Preferences reset.");
+  }
+
   function loadJob(job) {
     hydrateJobState(job.data);
     jobNameInput.value = job.name;
@@ -2614,6 +2737,33 @@
   loadJobsButton.addEventListener("click", openLoadJobs);
   closeLoadJobsButton.addEventListener("click", closeLoadJobs);
   refreshSharedButton.addEventListener("click", refreshSharedData);
+  openPreferencesButton.addEventListener("click", openPreferences);
+  closePreferencesButton.addEventListener("click", closePreferences);
+  resetPreferencesButton.addEventListener("click", resetPreferences);
+
+  for (const button of themeChoiceButtons) {
+    button.addEventListener("click", () => setThemePreference(button.dataset.themeChoice));
+  }
+
+  for (const button of decimalsChoiceButtons) {
+    button.addEventListener("click", () => setDecimalsPreference(Number(button.dataset.decimalsChoice)));
+  }
+
+  reduceMotionInput.addEventListener("change", () => {
+    setReduceMotionPreference(reduceMotionInput.checked);
+  });
+
+  autosaveInput.addEventListener("change", () => {
+    setAutosavePreference(autosaveInput.checked);
+  });
+
+  if (themeMedia) {
+    themeMedia.addEventListener("change", () => {
+      if (preferences.theme === "system") {
+        applyTheme();
+      }
+    });
+  }
   jobSearchInput.addEventListener("input", () => {
     jobSearchQuery = jobSearchInput.value;
     renderSavedJobs();
@@ -2628,6 +2778,7 @@
   document.addEventListener("input", (event) => {
     if (
       event.target.closest("#load-jobs-panel")
+      || event.target.closest("#preferences-panel")
       || event.target.id === "preset-name"
       || event.target.id === "import-file"
     ) {
@@ -2638,6 +2789,7 @@
   document.addEventListener("change", (event) => {
     if (
       event.target.closest("#load-jobs-panel")
+      || event.target.closest("#preferences-panel")
       || event.target.id === "preset-name"
       || event.target.id === "import-file"
     ) {
@@ -2653,8 +2805,20 @@
     }
   });
 
+  preferencesPanel.addEventListener("click", (event) => {
+    if (event.target === preferencesPanel) {
+      closePreferences();
+    }
+  });
+
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !loadJobsPanel.hidden) {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    if (!preferencesPanel.hidden) {
+      closePreferences();
+    } else if (!loadJobsPanel.hidden) {
       closeLoadJobs();
     }
   });
@@ -2744,6 +2908,8 @@
     const stores = await detectStores();
     truckStore = stores.truckStore;
     jobStore = stores.jobStore;
+    applyPreferences();
+    renderPreferences();
     updateStorageLabels();
     await initJobs();
     await initTruckPresets();

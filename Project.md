@@ -197,6 +197,16 @@ I'm thinking maybe a webUI unless a better option is suggested. For the exe and 
 - Prefer descriptive labels over bare jargon, e.g. "Apply swell (material
   expansion)" and "Settling allowance".
 
+### Preferences (implemented)
+- Preferences are stored per device, not inside jobs or shared Docker data.
+- Theme: dark by default, light or system.
+- Measurement decimals: up to 1, 2 or 3. Default is 1. Calculations keep full
+  precision and currency stays at 2 decimals.
+- Reduce motion disables animations and transitions.
+- Autosave drafts can be turned off. Turning it off clears the current draft.
+- Reset to defaults returns to dark theme, 1 decimal, motion enabled and autosave on.
+- The Preferences dialog is opened from the header.
+
 ### Saved jobs (implemented for browser and Docker)
 - Jobs can be saved, named, loaded and deleted.
 - The job bar has a name/address field and New / Save / Load controls.

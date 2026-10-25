@@ -91,6 +91,11 @@ button {
   cursor: pointer;
 }
 
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .hazard-bar {
   height: 6px;
   background: repeating-linear-gradient(
@@ -1050,6 +1055,69 @@ summary:hover {
   gap: 8px;
 }
 
+.preferences-dialog {
+  width: min(560px, 100%);
+}
+
+.preferences-body {
+  display: grid;
+  margin-top: 14px;
+}
+
+.preference-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.preference-copy h3 {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.preference-copy p {
+  max-width: 330px;
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.segmented-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.segmented-control button {
+  min-height: 29px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.segmented-control button.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.preferences-reset {
+  justify-self: start;
+  margin-top: 14px;
+}
+
 .job-search {
   display: block;
   margin: 14px 0 2px;
@@ -1387,6 +1455,24 @@ summary:hover {
     width: 72px;
   }
 
+  .preference-group {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .preference-copy p {
+    max-width: none;
+  }
+
+  .segmented-control {
+    width: 100%;
+  }
+
+  .segmented-control button {
+    flex: 1;
+  }
+
   .section-top,
   .delivery-top {
     align-items: flex-start;
@@ -1405,6 +1491,14 @@ summary:hover {
   .total-row .result-value.money {
     font-size: 33px;
   }
+}
+
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -13,6 +13,14 @@
   const JOB_SCHEMA_VERSION = 1;
   const DRAFT_KEY = "quote-assistant.draft";
   const DRAFT_SCHEMA_VERSION = 1;
+  const PREFERENCES_KEY = "quote-assistant.preferences";
+  const PREFERENCES_SCHEMA_VERSION = 1;
+  const PREFERENCE_DEFAULTS = Object.freeze({
+    theme: "dark",
+    decimals: 1,
+    reduceMotion: false,
+    autosave: true,
+  });
 
   function normalizePreset(value) {
     if (!value || typeof value !== "object") {
@@ -328,6 +336,71 @@
     return { load, save, refresh };
   }
 
+
+  function normalizePreferences(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const theme = source.theme === "light" || source.theme === "system"
+      ? source.theme
+      : "dark";
+    const decimals = Number(source.decimals);
+    const normalizedDecimals = decimals === 1 || decimals === 2 || decimals === 3
+      ? decimals
+      : 1;
+
+    return {
+      theme,
+      decimals: normalizedDecimals,
+      reduceMotion: source.reduceMotion === true,
+      autosave: source.autosave !== false,
+    };
+  }
+
+  function createPreferenceStore(backend) {
+    function load() {
+      if (!backend) {
+        return { ...PREFERENCE_DEFAULTS };
+      }
+
+      try {
+        const raw = backend.getItem(PREFERENCES_KEY);
+        if (!raw) {
+          return { ...PREFERENCE_DEFAULTS };
+        }
+
+        const data = JSON.parse(raw);
+        if (!data || data.schemaVersion !== PREFERENCES_SCHEMA_VERSION) {
+          return { ...PREFERENCE_DEFAULTS };
+        }
+
+        return normalizePreferences(data.preferences);
+      } catch (error) {
+        return { ...PREFERENCE_DEFAULTS };
+      }
+    }
+
+    function save(preferences) {
+      if (!backend) {
+        return false;
+      }
+
+      try {
+        backend.setItem(PREFERENCES_KEY, JSON.stringify({
+          schemaVersion: PREFERENCES_SCHEMA_VERSION,
+          preferences: normalizePreferences(preferences),
+        }));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    return {
+      load,
+      save,
+      defaults: PREFERENCE_DEFAULTS,
+    };
+  }
+
   function createDraftStore(backend) {
     function load() {
       if (!backend) {
@@ -411,9 +484,13 @@
     JOB_SCHEMA_VERSION,
     DRAFT_KEY,
     DRAFT_SCHEMA_VERSION,
+    PREFERENCES_KEY,
+    PREFERENCES_SCHEMA_VERSION,
+    PREFERENCE_DEFAULTS,
     createStore,
     createJobStore,
     createDraftStore,
+    createPreferenceStore,
     createRemoteStore,
     createRemoteJobStore,
   };

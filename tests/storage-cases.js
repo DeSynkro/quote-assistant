@@ -468,6 +468,73 @@ function createCases(QuoteStorage) {
         assert.equal(store.clear(), false);
       },
     },
+
+    {
+      name: "loads default preferences",
+      run() {
+        const store = QuoteStorage.createPreferenceStore(memoryBackend());
+        assert.deepEqual(store.load(), QuoteStorage.PREFERENCE_DEFAULTS);
+      },
+    },
+    {
+      name: "saves and loads preferences",
+      run() {
+        const store = QuoteStorage.createPreferenceStore(memoryBackend());
+        const preferences = {
+          theme: "light",
+          decimals: 2,
+          reduceMotion: true,
+          autosave: false,
+        };
+        assert.equal(store.save(preferences), true);
+        assert.deepEqual(store.load(), preferences);
+      },
+    },
+    {
+      name: "normalizes invalid preferences",
+      run() {
+        const backend = memoryBackend();
+        backend.setItem(QuoteStorage.PREFERENCES_KEY, JSON.stringify({
+          schemaVersion: 1,
+          preferences: {
+            theme: "neon",
+            decimals: 9,
+            reduceMotion: "yes",
+            autosave: "no",
+          },
+        }));
+        const store = QuoteStorage.createPreferenceStore(backend);
+        assert.deepEqual(store.load(), {
+          theme: "dark",
+          decimals: 1,
+          reduceMotion: false,
+          autosave: true,
+        });
+      },
+    },
+    {
+      name: "ignores invalid preference JSON and versions",
+      run() {
+        const backend = memoryBackend();
+        backend.setItem(QuoteStorage.PREFERENCES_KEY, "{not json");
+        const store = QuoteStorage.createPreferenceStore(backend);
+        assert.deepEqual(store.load(), QuoteStorage.PREFERENCE_DEFAULTS);
+
+        backend.setItem(QuoteStorage.PREFERENCES_KEY, JSON.stringify({
+          schemaVersion: 99,
+          preferences: { theme: "light" },
+        }));
+        assert.deepEqual(store.load(), QuoteStorage.PREFERENCE_DEFAULTS);
+      },
+    },
+    {
+      name: "handles unavailable preference storage",
+      run() {
+        const store = QuoteStorage.createPreferenceStore(null);
+        assert.deepEqual(store.load(), QuoteStorage.PREFERENCE_DEFAULTS);
+        assert.equal(store.save({ theme: "light" }), false);
+      },
+    },
   ];
 }
 

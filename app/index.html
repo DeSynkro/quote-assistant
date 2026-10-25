@@ -5,6 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quote Assistant</title>
 <link rel="icon" type="image/png" sizes="128x128" href="favicon.png">
+<script>
+  (function () {
+    try {
+      const raw = localStorage.getItem("quote-assistant.preferences");
+      if (!raw) {
+        return;
+      }
+      const data = JSON.parse(raw);
+      if (!data || data.schemaVersion !== 1 || !data.preferences) {
+        return;
+      }
+      const theme = data.preferences.theme === "system"
+        ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+        : data.preferences.theme;
+      if (theme === "light") {
+        document.documentElement.dataset.theme = "light";
+      }
+      if (data.preferences.reduceMotion === true) {
+        document.documentElement.dataset.reduceMotion = "true";
+      }
+    } catch (error) {
+      return;
+    }
+  })();
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -20,6 +45,7 @@
     </div>
     <div class="header-actions">
       <span class="pill green" id="storage-pill">Offline · local only</span>
+      <button class="btn small" id="open-preferences" type="button" aria-haspopup="dialog">Preferences</button>
     </div>
   </header>
 
@@ -396,6 +422,64 @@
     </label>
     <div class="small muted" id="job-list-status"></div>
     <div id="saved-jobs-list"></div>
+  </div>
+</div>
+
+<div class="overlay" id="preferences-panel" hidden>
+  <div class="dialog preferences-dialog" role="dialog" aria-modal="true" aria-labelledby="preferences-title">
+    <div class="dialog-head">
+      <h2 id="preferences-title">Preferences</h2>
+      <button class="icon-btn" id="close-preferences" type="button">Close</button>
+    </div>
+    <div class="small muted">Saved on this device only.</div>
+
+    <div class="preferences-body">
+      <section class="preference-group">
+        <div class="preference-copy">
+          <div class="eyebrow">Appearance</div>
+          <h3>Theme</h3>
+          <p>Choose how the estimator looks.</p>
+        </div>
+        <div class="segmented-control" role="group" aria-label="Theme">
+          <button type="button" data-theme-choice="dark">Dark</button>
+          <button type="button" data-theme-choice="light">Light</button>
+          <button type="button" data-theme-choice="system">System</button>
+        </div>
+      </section>
+
+      <section class="preference-group">
+        <div class="preference-copy">
+          <div class="eyebrow">Numbers</div>
+          <h3>Measurement decimals</h3>
+          <p>Show up to 1, 2 or 3 decimals. Calculations keep full precision.</p>
+        </div>
+        <div class="segmented-control" role="group" aria-label="Measurement decimals">
+          <button type="button" data-decimals-choice="1">1</button>
+          <button type="button" data-decimals-choice="2">2</button>
+          <button type="button" data-decimals-choice="3">3</button>
+        </div>
+      </section>
+
+      <section class="preference-group">
+        <div class="preference-copy">
+          <div class="eyebrow">Accessibility</div>
+          <h3>Reduce motion</h3>
+          <p>Turn off animations and transitions.</p>
+        </div>
+        <input class="switch" id="pref-reduce-motion" type="checkbox" aria-label="Reduce motion">
+      </section>
+
+      <section class="preference-group">
+        <div class="preference-copy">
+          <div class="eyebrow">Behaviour</div>
+          <h3>Autosave drafts</h3>
+          <p>Keep a local draft while you work. Drafts stay on this device.</p>
+        </div>
+        <input class="switch" id="pref-autosave" type="checkbox" aria-label="Autosave drafts">
+      </section>
+
+      <button class="btn preferences-reset" id="reset-preferences" type="button">Reset to defaults</button>
+    </div>
   </div>
 </div>
 
