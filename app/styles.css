@@ -320,8 +320,7 @@ button {
   margin-bottom: 16px;
 }
 
-.card h2,
-.results h2 {
+.card h2 {
   margin: 3px 0 0;
   color: var(--text);
   font-size: 18px;
@@ -774,7 +773,11 @@ select {
 
 .results h2 {
   margin: 0;
+  color: var(--accent);
   font-size: 22px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .live {
@@ -970,7 +973,7 @@ summary:hover {
 }
 
 .data-card {
-  padding: 17px;
+  padding: 17px 17px 14px;
 }
 
 .data-card .card-head {
@@ -985,11 +988,16 @@ summary:hover {
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-top: 12px;
+  margin-bottom: 0;
 }
 
 #data-status {
-  min-height: 16px;
+  min-height: 0;
+}
+
+#data-status:not(:empty) {
+  margin-top: 8px;
 }
 
 #data-status.warn {
