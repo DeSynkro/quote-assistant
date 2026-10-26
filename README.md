@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://codeberg.org/DeSynkro/quote-assistant/src/branch/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://codeberg.org/DeSynkro/quote-assistant/src/branch/main/VERSION"><img src="https://img.shields.io/badge/version-1.0.0-orange.svg" alt="Version 1.0.0"></a>
+  <a href="https://github.com/DeSynkro/quote-assistant/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://github.com/DeSynkro/quote-assistant/blob/main/VERSION"><img src="https://img.shields.io/badge/version-1.0.0-orange.svg" alt="Version 1.0.0"></a>
   <a href="https://ko-fi.com/desynkro"><img src="https://img.shields.io/badge/Ko--fi-support%20me-ff5e5b?logo=kofi&amp;logoColor=white" alt="Support me on Ko-fi"></a>
 </p>
 
@@ -67,7 +67,7 @@ The shared data lives in `docker/data/`. Stop the stack and copy that folder to 
 
 ### Linux AppImage
 
-Download the latest `.AppImage` from [Releases](https://codeberg.org/DeSynkro/quote-assistant/releases). Then make it executable and run it:
+Download the latest `.AppImage` from [Releases](https://github.com/DeSynkro/quote-assistant/releases). Then make it executable and run it:
 
 ```sh
 chmod +x Quote-Assistant-1.0.0.AppImage
@@ -76,21 +76,21 @@ chmod +x Quote-Assistant-1.0.0.AppImage
 
 ### Windows portable .exe
 
-Download the latest `.exe` from [Releases](https://codeberg.org/DeSynkro/quote-assistant/releases) and run it. No installer is needed.
+Download the latest `.exe` from [Releases](https://github.com/DeSynkro/quote-assistant/releases) and run it. No installer is needed.
 
 The `.exe` is much smaller than the AppImage because it uses the WebView2 runtime already installed on Windows. The Linux AppImage has to include its own WebKitGTK and GTK libraries.
 
 ### Android APK
 
-Download the latest `.apk` from [Releases](https://codeberg.org/DeSynkro/quote-assistant/releases), allow installation from your browser or file manager, and install it.
+Download the latest `.apk` from [Releases](https://github.com/DeSynkro/quote-assistant/releases), allow installation from your browser or file manager, and install it.
 
 The current APK is about 463 MB because it is a universal debug build. It contains native libraries for four Android CPU architectures: `x86_64`, `arm64-v8a`, `x86` and `armeabi-v7a`. Those four libraries make up around 455 MB of the download, and the debug build keeps its debug symbols. A release build for `arm64-v8a` only would be much smaller. The current APK is debug-signed and intended for sideloading and testing.
 
 ## Screenshots
 
 <p align="center">
-  <a href="https://codeberg.org/DeSynkro/quote-assistant/raw/branch/main/assets/screenshots/overview.webp"><img src="assets/screenshots/overview.webp" alt="Quote Assistant job setup" width="49%"></a>
-  <a href="https://codeberg.org/DeSynkro/quote-assistant/raw/branch/main/assets/screenshots/estimate.webp"><img src="assets/screenshots/estimate.webp" alt="Quote Assistant estimate" width="49%"></a>
+  <a href="https://raw.githubusercontent.com/DeSynkro/quote-assistant/refs/heads/main/assets/screenshots/overview.webp"><img src="assets/screenshots/overview.webp" alt="Quote Assistant job setup" width="49%"></a>
+  <a href="https://raw.githubusercontent.com/DeSynkro/quote-assistant/refs/heads/main/assets/screenshots/estimate.webp"><img src="assets/screenshots/estimate.webp" alt="Quote Assistant estimate" width="49%"></a>
 </p>
 
 ## Features
